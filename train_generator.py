@@ -223,7 +223,7 @@ def main(args, config):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--config', default='./configs/Generator_flickr.yaml')
+    parser.add_argument('--config', default='./configs/Flickr_poison.yaml')
     
     parser.add_argument('--checkpoint', default=None)   
     parser.add_argument('--device', default='cuda')
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
-    config = {**config['common'], **config['step2']}
+    config = {**config['common'], **config['step1']}
 
     Path(config['output_dir']).mkdir(parents=True, exist_ok=True)
         
