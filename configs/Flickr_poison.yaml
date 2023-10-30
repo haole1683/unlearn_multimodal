@@ -1,0 +1,57 @@
+common:
+  # model attacked
+  model: 'clip'
+  clip_model: 'ViT-B/32'
+
+  # dataset protected
+  dataset: 'flickr'
+
+  # dataset json file
+  train_file:  ['data/flickr30k_train.json']
+  val_file: 'data/flickr30k_val.json'                
+  test_file: 'data/flickr30k_test.json'
+
+  # dataset path
+  image_root: '/remote-home/songtianwei/research/albef/ALBEF/datasets/' #flickr30k-images/
+
+  # noise path
+  noise_root: '/remote-home/songtianwei/research/unlearn_multimodal/output/clip'
+
+  bert_config: 'configs/config_bert.json'
+
+  alpha: 0.4
+  distill: True
+  warm_up: True
+
+step1:  # train generator
+  batch_size_train: 24  
+  batch_size_test: 64
+  image_res: 224
+  max_words: 77
+  optimizer: {opt: adamW, lr: 1e-5, weight_decay: 0.02} 
+  schedular: {sched: cosine, lr: 1e-5, epochs: 10, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, warmup_epochs: 1, cooldown_epochs: 0}
+
+  output_dir: 'output/train_generator_min_min/'
+
+step2:  # generate poison dataset
+  batch_size_train: 256  # ori : 32
+  batch_size_test: 64
+  image_res: 224
+  max_words: 77
+  output_dir: './datasets/poison'
+
+step3:  # finetune in downstream dataset
+  batch_size_train: 256  # ori : 32
+  batch_size_test: 64
+  image_res: 224
+  max_words: 77
+  # model setting
+  optimizer: {opt: adamW, lr: 1e-5, betas: (0.9, 0.98), eps: 1.0e-6, weight_decay: 0.2}
+  schedular: {sched: cosine, lr: 1e-5, epochs: 15, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
+  output_dir: 'output/flickr/clip_retrieval'
+
+
+
+
+
+

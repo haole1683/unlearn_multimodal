@@ -1,0 +1,6 @@
+/data/
+/datasets/
+/output/
+*.pyc
+*.jar
+tmp*
