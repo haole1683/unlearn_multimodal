@@ -75,6 +75,13 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
             delta_im = delta_im.to(image.device)
             delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
             
+            # For debug
+            # image_paths = anno
+            # image_paths = [path.split('/')[-1].split('.')[0] for path in image_paths]
+            # save_names = [str(image_idx) + ".pt" for image_idx in image_paths]
+            # delta_im = torch.stack([torch.load(os.path.join(poison_data_save_path, save_names[t]))['noise'] for t in range(len(save_names))])
+            # delta_im = delta_im.to(image.device)
+            
             # add delta(noise) to image
             image_adv = torch.clamp(image + delta_im, min=0, max=1)
             # normalize the image_adv
@@ -93,10 +100,10 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
                 dist.reduce(reduced_loss, 0)  # 使用reduce将损失从所有卡汇总到主卡（0号卡）
 
                 if dist.get_rank() == 0:  # 只有主卡打印损失
-                    print(f'Batch {batch_idx}, Loss: {reduced_loss.item()}')
+                    print(f'Distributed Batch {batch_idx}, Loss: {reduced_loss.item()}')
                 metric_logger.update(total_loss=reduced_loss.item())
             else:
-                print(f'Batch {batch_idx}, Loss: {total_loss.item()}')
+                print(f'Singal Batch {batch_idx}, Loss: {total_loss.item()}')
                 metric_logger.update(total_loss=total_loss.item())
                         
             for i in range(batch_size):
@@ -111,7 +118,9 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
                     "noise":delta_im[i].detach().cpu(),
                 }
                 tensor_save_path = os.path.join(poison_data_save_path, save_name)
-                torch.save(data_dict, tensor_save_path)
+                save_if = False
+                if save_if:
+                    torch.save(data_dict, tensor_save_path)
                 json_dict = {}
                 json_dict['image'] = save_name 
                 json_dict['caption'] = text[i]
@@ -156,8 +165,10 @@ def main(args, config):
     if args.checkpoint is None or not os.path.exists(args.checkpoint):
         logging.info("No checkpoint provided. Please run train_generator first.")
         raise "No checkpoint provided"
-    checkpoint = torch.load(args.checkpoint)
-    generator.load_state_dict(checkpoint['model'])
+    else:
+        logging.info("loading from " + args.checkpoint)
+        checkpoint = torch.load(args.checkpoint)
+        generator.load_state_dict(checkpoint['model'])
     generator.to(device)
     
     #### CLIP Model ####   
@@ -197,7 +208,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/Flickr_poison.yaml')
     
-    parser.add_argument('--checkpoint', default='/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_min_min/checkpoint_epoch_10.pth')   
+    parser.add_argument('--checkpoint', default='/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth')   
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
