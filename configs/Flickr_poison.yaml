@@ -7,9 +7,9 @@ common:
   dataset: 'flickr'
 
   # dataset json file
-  train_file:  ['data/flickr30k_train.json']
-  val_file: 'data/flickr30k_val.json'                
-  test_file: 'data/flickr30k_test.json'
+  train_file:  ['/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_train.json']
+  val_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_val.json'                
+  test_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_test.json'
 
   # dataset path
   image_root: '/remote-home/songtianwei/research/albef/ALBEF/datasets/' #flickr30k-images/
@@ -32,17 +32,17 @@ step1:  # train generator
   optimizer: {opt: adamW, lr: 1e-5, weight_decay: 0.02} 
   schedular: {sched: cosine, lr: 1e-5, epochs: 10, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, warmup_epochs: 1, cooldown_epochs: 0}
 
-  output_dir: 'output/train_generator_min_min/'
+  output_dir: 'output/train_generator_max_loss/'
 
 step2:  # generate poison dataset
-  batch_size_train: 64  # ori : 32
+  batch_size_train: 64  # ori : 64
   batch_size_test: 64
   image_res: 224
   max_words: 77
-  output_dir: './datasets/poison_min_min'
+  output_dir: './datasets/poison_max_loss'
 
 step3:  # finetune in downstream dataset
-  batch_size_train: 256  # ori : 32
+  batch_size_train: 64  # ori : 256
   batch_size_test: 64
   image_res: 224
   max_words: 77

@@ -98,7 +98,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         logits_per_image, logits_per_caption= model(image_input, text)                  
         ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
         total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
-        use_min_min = True
+        use_min_min = False
         if use_min_min:
             loss = total_loss
         else:

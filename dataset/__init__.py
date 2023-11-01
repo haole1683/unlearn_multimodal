@@ -51,11 +51,22 @@ def create_dataset(dataset, config):
     transform_resize = transforms.Compose([
         transforms.Resize((config['image_res'],config['image_res']),interpolation=Image.BICUBIC),
     ])
-    train_transform_no_norm = transforms.Compose([
-        transforms.RandomResizedCrop(config['image_res'], scale=(0.9, 1.0), interpolation=Image.BICUBIC),
-        _convert_to_rgb,
-        transforms.ToTensor(),
+    # train_transform_no_norm = transforms.Compose([
+    #     transforms.RandomResizedCrop(config['image_res'], scale=(0.9, 1.0), interpolation=Image.BICUBIC),
+    #     _convert_to_rgb,
+    #     transforms.ToTensor(),
+    # ])
+    transform_resize_to_tensor = transforms.Compose([
+        transforms.Resize((config['image_res'],config['image_res']),interpolation=Image.BICUBIC),
+        transforms.ToTensor()
     ])
+    train_transform_no_norm = transforms.Compose([                        
+            transforms.RandomResizedCrop(config['image_res'],scale=(0.5, 1.0), interpolation=Image.BICUBIC),
+            transforms.RandomHorizontalFlip(),
+            RandomAugment(2,7,isPIL=True,augs=['Identity','AutoContrast','Equalize','Brightness','Sharpness',
+                                              'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate']),     
+            transforms.ToTensor(),
+        ])  
     
     if dataset=='pretrain':
         dataset = pretrain_dataset(config['train_file'], pretrain_transform)                  
@@ -80,7 +91,7 @@ def create_dataset(dataset, config):
         return train_dataset, val_dataset, test_dataset  
     
     elif dataset=='re_train_poison':  # train in my poisoned dataset
-        train_dataset = re_train_dataset_with_poison(config['train_file'], train_transform_no_norm, normalize_fn,  config['image_root'], "/remote-home/songtianwei/research/unlearn_multimodal/datasets/poison_min_min/flickr/poison_data")
+        train_dataset = re_train_dataset_with_poison(config['train_file'], train_transform_no_norm, normalize_fn,  config['image_root'], "/remote-home/songtianwei/research/unlearn_multimodal/datasets/poison_max_loss/flickr/poison_data")
         val_dataset = re_eval_dataset(config['val_file'], test_transform, config['image_root'])  
         test_dataset = re_eval_dataset(config['test_file'], test_transform, config['image_root'])                
         return train_dataset, val_dataset, test_dataset  

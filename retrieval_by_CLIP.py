@@ -45,7 +45,7 @@ def get_poisoned_similarity(args, config, model, device):
     result = {'avg_sim': avg_sim}
     return result
 
-def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, config):
+def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, config, args):
     # train
     model.train()  
     
@@ -63,7 +63,7 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
     
     scaler = GradScaler()
     
-    for i,(image, text, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for batch_idx,(image, text, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
         image = image.to(device,non_blocking=True)   
         idx = idx.to(device,non_blocking=True)   
@@ -71,21 +71,33 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
 
         optimizer.zero_grad()
 
-        with autocast():
-            logits_per_image, logits_per_caption = model(image, text)
-            ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
-            total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
+        # with autocast():
+        logits_per_image, logits_per_caption = model(image, text)
+        ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
+        total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
+        total_loss.backward()
+        optimizer.step()
         
-        scaler.scale(total_loss).backward()
-        scaler.step(optimizer)
-        scaler.update()    
+        # scaler.scale(total_loss).backward()
+        # scaler.step(optimizer)
+        # scaler.update()    
         
-        metric_logger.update(total_loss=total_loss.item())
+        # gather loss
+        if args.distributed:
+            reduced_loss = total_loss.clone()
+            dist.reduce(reduced_loss, 0)  # 使用reduce将损失从所有卡汇总到主卡（0号卡）
+
+            if dist.get_rank() == 0:  # 只有主卡打印损失
+                print(f'Distributed Batch {batch_idx}, Loss: {reduced_loss.item()}')
+            metric_logger.update(total_loss=reduced_loss.item())
+        else:
+            print(f'Singal Batch {batch_idx}, Loss: {total_loss.item()}')
+            metric_logger.update(total_loss=total_loss.item())
+
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-        if epoch==0 and i%step_size==0 and i<=warmup_iterations: 
-            scheduler.step(i//step_size)  
-               
+        if epoch==0 and batch_idx%step_size==0 and batch_idx<=warmup_iterations: 
+            scheduler.step(batch_idx//step_size)  
         
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -203,6 +215,7 @@ def main(args, config):
     logging.info("Creating model")
     model, _ = clip.load(config['clip_model'], device, jit=False)
     model = model.float()
+    model = model.to(device) 
     tokenizer = clip.tokenize
 
     start_epoch = 0
@@ -260,7 +273,7 @@ def main(args, config):
         if not args.evaluate:
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
-            train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler, config)  
+            train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler, config, args)  
             
         score_val_i2t, score_val_t2i, = evaluation(model_without_ddp, val_loader, tokenizer, device, config)
         score_test_i2t, score_test_t2i = evaluation(model_without_ddp, test_loader, tokenizer, device, config)

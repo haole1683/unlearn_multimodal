@@ -191,6 +191,7 @@ class re_train_dataset_with_poison(Dataset):
         self.img_ids = {}   
         self.poison_noise_path = poison_noise_path
         self.normalize_fn = normalize_fn
+        self.debug = False
         
         n = 0
         for ann in self.ann:
@@ -214,11 +215,17 @@ class re_train_dataset_with_poison(Dataset):
         delta_name = str(image_id) + '.pt'
         delta_noise = torch.load(os.path.join(self.poison_noise_path, delta_name))['noise']
         
-        # TODO : Here is question , poison before transform or after?  
-        image = self.transform(image)
+        image_ori = self.transform(image)
+        # TODO : Here is question , poison before transform or after? 
+        image_adv = torch.clamp(image_ori + delta_noise,0,1) 
+        # image_adv = self.transform(image)
         
-        image_adv = torch.clamp(image + delta_noise,0,1)
+        image_adv_norm = self.normalize_fn(image_adv)
+        
         caption = pre_caption(ann['caption'], self.max_words) 
-
-        return image_adv, caption, self.img_ids[ann['image_id']]
+        
+        if self.debug:
+            return image_ori, image_adv,  image_adv_norm, caption, self.img_ids[ann['image_id']]
+        else:
+            return image_adv_norm, caption, self.img_ids[ann['image_id']]
     
