@@ -187,7 +187,7 @@ def main(args, config):
         samplers = create_sampler([train_dataset], [True], num_tasks, global_rank) + [None, None]
     else:
         samplers = [None, None, None]
-    train_loader, val_loader, test_loader = create_loader([train_dataset, val_dataset, test_dataset],samplers, batch_size=[config['batch_size_train']]+[config['batch_size_test']]*2, num_workers=[4,4,4], is_trains=[True, False, False],collate_fns=[None,None,None])   
+    train_loader, val_loader, test_loader = create_loader([train_dataset, val_dataset, test_dataset],samplers, batch_size=[config['batch_size_train']]+[config['batch_size_test']]*2, num_workers=[4,4,4], is_trains=[False, False, False],collate_fns=[None,None,None])   
 
     generate_poison_dataset(generator, model, train_loader, tokenizer, device, config, args)
 
@@ -197,7 +197,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/Flickr_poison.yaml')
     
-    parser.add_argument('--checkpoint', default='./output/train_generator/checkpoint_epoch_2.pth')   
+    parser.add_argument('--checkpoint', default='/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_min_min/checkpoint_epoch_10.pth')   
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    

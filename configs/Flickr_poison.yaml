@@ -35,11 +35,11 @@ step1:  # train generator
   output_dir: 'output/train_generator_min_min/'
 
 step2:  # generate poison dataset
-  batch_size_train: 256  # ori : 32
+  batch_size_train: 64  # ori : 32
   batch_size_test: 64
   image_res: 224
   max_words: 77
-  output_dir: './datasets/poison'
+  output_dir: './datasets/poison_min_min'
 
 step3:  # finetune in downstream dataset
   batch_size_train: 256  # ori : 32
