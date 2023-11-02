@@ -89,10 +89,10 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
             dist.reduce(reduced_loss, 0)  # 使用reduce将损失从所有卡汇总到主卡（0号卡）
 
             if dist.get_rank() == 0:  # 只有主卡打印损失
-                print(f'Distributed Batch {batch_idx}, Loss: {reduced_loss.item()}')
+                logging.info(f'Finetune,Distributed,Epoch {epoch},Batch {batch_idx},Loss: {reduced_loss.item()}')
             metric_logger.update(total_loss=reduced_loss.item())
         else:
-            print(f'Singal Batch {batch_idx}, Loss: {total_loss.item()}')
+            logging.info(f'Finetune,Singal,Epoch {epoch},Batch {batch_idx},Loss: {total_loss.item()}')
             metric_logger.update(total_loss=total_loss.item())
 
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -228,10 +228,12 @@ def main(args, config):
 
     if args.freeze_encoder == 'image':
         freeze_encoder = model.visual
+        logging.info("freeze image encoder")
         for param in freeze_encoder.parameters():
             param.requires_grad = False
     elif args.freeze_encoder == 'text':
         freeze_encoder = model.transformer
+        logging.info("freeze text encoder")
         for param in freeze_encoder.parameters():
             param.requires_grad = False
 
@@ -249,15 +251,23 @@ def main(args, config):
     
     #### Dataset #### 
     logging.info("Creating retrieval dataset for {}".format(config['dataset']))
-    train_dataset, val_dataset, test_dataset = create_dataset('re_train_poison', config)
+    clean_trainset ,val_dataset, test_dataset = create_dataset("re", config)
+    poison_trainset, val_dataset, test_dataset = create_dataset('re_train_poison', config)
+    
+    poison_if = True
+    if poison_if:
+        train_dataset = poison_trainset
+    else:
+        train_dataset = clean_trainset
+    
     logging.info(f"Training dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}, Testing dataset size:{len(test_dataset)}")  
-
     if args.distributed:
         num_tasks = utils.get_world_size()
         global_rank = utils.get_rank()            
         samplers = create_sampler([train_dataset], [True], num_tasks, global_rank) + [None, None]
     else:
         samplers = [None, None, None]
+    
     
     train_loader, val_loader, test_loader = create_loader([train_dataset, val_dataset, test_dataset],samplers, batch_size=[config['batch_size_train']]+[config['batch_size_test']]*2, num_workers=[4,4,4], is_trains=[True, False, False],collate_fns=[None,None,None])   
 

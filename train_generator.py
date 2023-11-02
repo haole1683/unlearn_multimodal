@@ -73,13 +73,15 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         
         delta_im = gen_image
         # limit the perturbation to a range of [-epsilon, epsilon]
-        norm_type = "l2"
+        norm_type = "linf"
         epsilon = 8
         if norm_type == "l2":
             temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
             delta_im = delta_im * epsilon / temp
-        else:
+        elif norm_type == "linf":
             delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
+        elif norm_type == "linf":
+            delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)
 
         delta_im = delta_im.to(image.device)
         delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
@@ -98,12 +100,12 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         logits_per_image, logits_per_caption= model(image_input, text)                  
         ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
         total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
-        use_min_min = False
+        use_min_min = True
         if use_min_min:
             loss = total_loss
         else:
             loss = -total_loss
-        # print("loss is " , total_loss)
+
         loss.backward()
         optimizer.step()  
         

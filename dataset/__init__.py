@@ -91,7 +91,7 @@ def create_dataset(dataset, config):
         return train_dataset, val_dataset, test_dataset  
     
     elif dataset=='re_train_poison':  # train in my poisoned dataset
-        train_dataset = re_train_dataset_with_poison(config['train_file'], train_transform_no_norm, normalize_fn,  config['image_root'], "/remote-home/songtianwei/research/unlearn_multimodal/datasets/poison_max_loss/flickr/poison_data")
+        train_dataset = re_train_dataset_with_poison(config['train_file'], train_transform_no_norm, normalize_fn,  config['image_root'], config['poison_delta_root'])
         val_dataset = re_eval_dataset(config['val_file'], test_transform, config['image_root'])  
         test_dataset = re_eval_dataset(config['test_file'], test_transform, config['image_root'])                
         return train_dataset, val_dataset, test_dataset  

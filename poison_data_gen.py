@@ -64,16 +64,15 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
             
             delta_im = gen_image
             # limit the perturbation to a range of [-epsilon, epsilon]
-            norm_type = "l2"
+            norm_type = "linf"
             epsilon = 8
             if norm_type == "l2":
                 temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
                 delta_im = delta_im * epsilon / temp
-            else:
-                delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  
-
-            delta_im = delta_im.to(image.device)
-            delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
+            elif norm_type == "linf":
+                delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
+            elif norm_type == "linf":
+                delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)
             
             # For debug
             # image_paths = anno
@@ -82,6 +81,7 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
             # delta_im = torch.stack([torch.load(os.path.join(poison_data_save_path, save_names[t]))['noise'] for t in range(len(save_names))])
             # delta_im = delta_im.to(image.device)
             
+            delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
             # add delta(noise) to image
             image_adv = torch.clamp(image + delta_im, min=0, max=1)
             # normalize the image_adv
@@ -100,14 +100,13 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
                 dist.reduce(reduced_loss, 0)  # 使用reduce将损失从所有卡汇总到主卡（0号卡）
 
                 if dist.get_rank() == 0:  # 只有主卡打印损失
-                    print(f'Distributed Batch {batch_idx}, Loss: {reduced_loss.item()}')
+                    print(f'Generate, Distributed Batch {batch_idx}, Loss: {reduced_loss.item()}')
                 metric_logger.update(total_loss=reduced_loss.item())
             else:
-                print(f'Singal Batch {batch_idx}, Loss: {total_loss.item()}')
+                print(f'Generate, Singal Batch {batch_idx}, Loss: {total_loss.item()}')
                 metric_logger.update(total_loss=total_loss.item())
                         
             for i in range(batch_size):
-                # "flickr30k-images/1000092795.jpg"
                 image_path = anno[i]
                 image_idx = image_path.split('/')[-1].split('.')[0] 
                 save_name = str(image_idx) + ".pt"
@@ -220,7 +219,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
     config = {**config['common'], **config['step2']}
 
-    config['output_dir'] = os.path.join(config['output_dir'], config['dataset'])
+    config['output_dir'] = os.path.join(config['poison_delta_root'], config['dataset'])
     Path(config['output_dir']).mkdir(parents=True, exist_ok=True)
 
     main(args, config)
