@@ -3,7 +3,15 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from PIL import Image
 
-from dataset.caption_dataset import re_train_dataset, re_eval_dataset, pretrain_dataset, re_train_dataset_with_anno,re_train_dataset_with_poison
+from dataset.caption_dataset import (
+    re_train_dataset, 
+    re_eval_dataset, 
+    pretrain_dataset, 
+    re_train_dataset_with_anno,
+    re_train_dataset_with_poison,
+    train_dataset_class,
+    eval_dataset_class
+)
 from dataset.nlvr_dataset import nlvr_dataset
 from dataset.ve_dataset import ve_dataset
 from dataset.vqa_dataset import vqa_dataset
@@ -126,6 +134,11 @@ def create_dataset(dataset, config):
         test_dataset = grounding_dataset(config['test_file'], test_transform, config['image_root'], mode='test')             
         return train_dataset, test_dataset    
     
+    elif dataset=='cifar-10':
+        train_dataset = train_dataset_class(config['train_file'], train_transform)
+        val_dataset = eval_dataset_class(config['val_file'], test_transform, config['image_root'])  
+        test_dataset = eval_dataset_class(config['test_file'], test_transform, config['image_root'])                
+        return train_dataset, val_dataset, test_dataset  
 
 def vqa_collate_fn(batch):
     image_list, question_list, answer_list, weight_list, n = [], [], [], [], []

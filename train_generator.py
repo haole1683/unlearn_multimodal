@@ -70,18 +70,16 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         batch_size = image.size(0)
         noise = torch.randn(batch_size, 100).to(device)
         gen_image, _ = generator(noise, sec_emb)
-        
         delta_im = gen_image
+        
         # limit the perturbation to a range of [-epsilon, epsilon]
-        norm_type = "linf"
-        epsilon = 8
+        norm_type = args.norm_type
+        epsilon = args.epsilon
         if norm_type == "l2":
             temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
             delta_im = delta_im * epsilon / temp
         elif norm_type == "linf":
             delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
-        elif norm_type == "linf":
-            delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)
 
         delta_im = delta_im.to(image.device)
         delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
@@ -100,8 +98,9 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         logits_per_image, logits_per_caption= model(image_input, text)                  
         ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
         total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
-        use_min_min = True
-        if use_min_min:
+        
+        use_max_loss = False
+        if use_max_loss:
             loss = total_loss
         else:
             loss = -total_loss
@@ -156,9 +155,16 @@ def main(args, config):
     cudnn.benchmark = True
     
     generator = NetG()
-    if args.checkpoint:
-        generator = torch.load(args.checkpoint)
+    if args.checkpoint is None or not os.path.exists(args.checkpoint):
+        logging.info("No checkpoint provided. Please run train_generator first.")
+        raise "No checkpoint provided"
+    else:
+        logging.info("loading from " + args.checkpoint)
+        checkpoint = torch.load(args.checkpoint)
+        generator.load_state_dict(checkpoint['model'])
+
     generator = generator.to(device)
+    
     # arg_opt = utils.AttrDict(config['optimizer'])
     # optimizer = create_optimizer(arg_opt, model)
     # arg_sche = utils.AttrDict(config['schedular'])
@@ -233,6 +239,10 @@ if __name__ == '__main__':
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action="store_true")
+    
+    # noise limit
+    parser.add_argument('--norm_type', default='l2', type=str, choices=['l2', 'linf'])
+    parser.add_argument('--epsilon', default=8, type=int, help='perturbation')
 
     # output
     

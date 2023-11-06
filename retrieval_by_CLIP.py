@@ -214,6 +214,7 @@ def main(args, config):
     #### Model #### 
     logging.info("Creating model")
     model, _ = clip.load(config['clip_model'], device, jit=False)
+    
     model = model.float()
     model = model.to(device) 
     tokenizer = clip.tokenize
@@ -251,13 +252,14 @@ def main(args, config):
     
     #### Dataset #### 
     logging.info("Creating retrieval dataset for {}".format(config['dataset']))
-    clean_trainset ,val_dataset, test_dataset = create_dataset("re", config)
-    poison_trainset, val_dataset, test_dataset = create_dataset('re_train_poison', config)
     
-    poison_if = True
-    if poison_if:
+    if args.poisoned:
+        logging.info("Use poisoned dataset for finetune")
+        poison_trainset, val_dataset, test_dataset = create_dataset('cifar-10', config)
         train_dataset = poison_trainset
     else:
+        logging.info("Use clean dataset for finetune")
+        clean_trainset ,val_dataset, test_dataset = create_dataset("re", config)
         train_dataset = clean_trainset
     
     logging.info(f"Training dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}, Testing dataset size:{len(test_dataset)}")  
@@ -386,7 +388,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
 
     # poisoning
-    parser.add_argument('--poisoned', action='store_true')
+    parser.add_argument('--poisoned', action='store_true', help="use poisoned dataset for training if not clean train")
     
     # model
     parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text

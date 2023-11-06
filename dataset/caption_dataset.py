@@ -229,3 +229,74 @@ class re_train_dataset_with_poison(Dataset):
         else:
             return image_adv_norm, caption, self.img_ids[ann['image_id']]
     
+    
+    
+# My Class Dataset
+# Use class name as key word of search , construct the dataset 
+# train from scratch(pretrain) of CLIP instead of attack pretrained model
+class train_dataset_class(Dataset):
+    def __init__(self, ann_file, transform, max_words=77):    
+         
+        self.ann = []
+        for f in ann_file:
+            self.ann += json.load(open(f,'r'))
+        self.transform = transform
+        self.max_words = max_words
+        self.img_ids = {}   
+        
+        n = 0
+        for ann in self.ann:
+            img_id = ann['image_id']
+            if img_id not in self.img_ids.keys():
+                self.img_ids[img_id] = n
+                n += 1    
+        
+    def __len__(self):
+        return len(self.ann)
+    
+    
+    def __getitem__(self, index):    
+        
+        ann = self.ann[index]
+        
+        image_path = os.path.join(ann['image_path'])        
+        image = Image.open(image_path).convert('RGB')   
+        image = self.transform(image)
+        
+        caption = pre_caption(ann['caption'], self.max_words) 
+
+        return image, caption, self.img_ids[ann['image_id']]
+    
+    
+class eval_dataset_class(Dataset):
+    def __init__(self, ann_file, transform, max_words=77):    
+         
+        self.ann = []
+        for f in ann_file:
+            self.ann += json.load(open(f,'r'))
+        self.transform = transform
+        self.max_words = max_words
+        self.img_ids = {}   
+        
+        n = 0
+        for ann in self.ann:
+            img_id = ann['image_id']
+            if img_id not in self.img_ids.keys():
+                self.img_ids[img_id] = n
+                n += 1    
+        
+    def __len__(self):
+        return len(self.ann)
+    
+    
+    def __getitem__(self, index):    
+        
+        ann = self.ann[index]
+        
+        image_path = os.path.join(ann['image_path'])        
+        image = Image.open(image_path).convert('RGB')   
+        image = self.transform(image)
+        
+        caption = pre_caption(ann['caption'], self.max_words) 
+
+        return image, caption, self.img_ids[ann['image_id']]

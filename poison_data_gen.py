@@ -63,16 +63,15 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
             gen_image, _ = generator(noise, sec_emb)
             
             delta_im = gen_image
+            
             # limit the perturbation to a range of [-epsilon, epsilon]
-            norm_type = "linf"
-            epsilon = 8
+            norm_type = args.norm_type
+            epsilon = args.epsilon
             if norm_type == "l2":
                 temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
                 delta_im = delta_im * epsilon / temp
             elif norm_type == "linf":
                 delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
-            elif norm_type == "linf":
-                delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)
             
             # For debug
             # image_paths = anno
@@ -117,8 +116,7 @@ def generate_poison_dataset(generator, model, data_loader, tokenizer, device, co
                     "noise":delta_im[i].detach().cpu(),
                 }
                 tensor_save_path = os.path.join(poison_data_save_path, save_name)
-                save_if = False
-                if save_if:
+                if not args.debug:
                     torch.save(data_dict, tensor_save_path)
                 json_dict = {}
                 json_dict['image'] = save_name 
@@ -213,6 +211,11 @@ if __name__ == '__main__':
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action="store_true")
+    parser.add_argument('--debug', action="store_true")
+    
+    # noise limit
+    parser.add_argument('--norm_type', default='l2', type=str, choices=['l2', 'linf'])
+    parser.add_argument('--epsilon', default=8, type=int, help='perturbation')
     
     args = parser.parse_args()
     

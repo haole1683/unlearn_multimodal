@@ -7,7 +7,7 @@ common:
   dataset: 'flickr'
 
   # dataset json file
-  train_file:  ['/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_train.json']
+  train_file:  ['/remote-home/songtianwei/research/unlearn_multimodal/data/cifar10.json']
   val_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_val.json'                
   test_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_test.json'
 
