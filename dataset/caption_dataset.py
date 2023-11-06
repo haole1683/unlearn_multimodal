@@ -245,11 +245,11 @@ class train_dataset_class(Dataset):
         self.img_ids = {}   
         
         n = 0
-        for ann in self.ann:
-            img_id = ann['image_id']
-            if img_id not in self.img_ids.keys():
-                self.img_ids[img_id] = n
-                n += 1    
+        # for ann in self.ann:
+        #     img_id = ann['image_id']
+        #     if img_id not in self.img_ids.keys():
+        #         self.img_ids[img_id] = n
+        #         n += 1    
         
     def __len__(self):
         return len(self.ann)
@@ -265,38 +265,43 @@ class train_dataset_class(Dataset):
         
         caption = pre_caption(ann['caption'], self.max_words) 
 
-        return image, caption, self.img_ids[ann['image_id']]
+        # return image, caption, self.img_ids[ann['image_id']]
+        return image, caption, 1
+    
+
+    
     
     
 class eval_dataset_class(Dataset):
-    def __init__(self, ann_file, transform, max_words=77):    
-         
-        self.ann = []
-        for f in ann_file:
-            self.ann += json.load(open(f,'r'))
+    def __init__(self, ann_file, transform, image_root, max_words=30):        
+        self.ann = json.load(open(ann_file,'r'))
         self.transform = transform
-        self.max_words = max_words
-        self.img_ids = {}   
+        self.image_root = image_root
+        self.max_words = max_words 
         
-        n = 0
-        for ann in self.ann:
-            img_id = ann['image_id']
-            if img_id not in self.img_ids.keys():
-                self.img_ids[img_id] = n
-                n += 1    
+        self.text = []
+        self.image = []
+        self.txt2img = {}
+        self.img2txt = {}
         
+        txt_id = 0
+        for img_id, ann in enumerate(self.ann):
+            self.image.append(ann['image'])
+            self.img2txt[img_id] = []
+            for i, caption in enumerate(ann['caption']):
+                self.text.append(pre_caption(caption,self.max_words))
+                self.img2txt[img_id].append(txt_id)
+                self.txt2img[txt_id] = img_id
+                txt_id += 1
+                                    
     def __len__(self):
-        return len(self.ann)
-    
+        return len(self.image)
     
     def __getitem__(self, index):    
         
-        ann = self.ann[index]
-        
-        image_path = os.path.join(ann['image_path'])        
-        image = Image.open(image_path).convert('RGB')   
-        image = self.transform(image)
-        
-        caption = pre_caption(ann['caption'], self.max_words) 
+        image_path = os.path.join(self.image_root, self.ann[index]['image'])        
+        image = Image.open(image_path).convert('RGB')    
+        image = self.transform(image)  
 
-        return image, caption, self.img_ids[ann['image_id']]
+        return image, index
+  

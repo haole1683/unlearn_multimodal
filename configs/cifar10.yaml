@@ -1,7 +1,8 @@
 common:
   # model attacked
   model: 'clip'
-  clip_model: 'ViT-B/32'
+  # clip_model: 'ViT-B/32'
+  clip_model: 'RN50'
 
   # dataset protected
   dataset: 'flickr'
@@ -23,6 +24,8 @@ common:
   distill: True
   warm_up: True
 
+  model_init: xavier
+
 step1:  # train generator
   batch_size_train: 24  
   batch_size_test: 64
@@ -30,7 +33,7 @@ step1:  # train generator
   max_words: 77
   # generator training setting
   optimizer: {opt: adamW, lr: 0.0001, betas: (0.0, 0.9)}
-  schedular: {sched: cosine, lr: 1e-5, epochs: 15, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
+  schedular: {sched: cosine, lr: 1e-4, epochs: 15, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
   
   output_dir: 'output/train_generator_linf_max_loss/'
 
@@ -54,6 +57,16 @@ step3:  # finetune in downstream dataset
   poison_delta_root: "/remote-home/songtianwei/research/unlearn_multimodal/datasets/poison_max_loss/flickr/poison_data"
   output_dir: 'output/flickr/clip_retrieval'
 
+Pretrain:
+  batch_size_train: 128  
+  batch_size_test: 64
+  image_res: 224
+  max_words: 77
+  # generator training setting
+  optimizer: {opt: adamW, lr:  0.0005, betas: (0.0, 0.9),eps: 1.0e-6, weight_decay: 1e-3}
+  schedular: {sched: cosine, lr: 0.0005, epochs: 65, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 15, cooldown_epochs: 0}
+  
+  output_dir: 'output/cifar10-Pretrain/'
 
 
 

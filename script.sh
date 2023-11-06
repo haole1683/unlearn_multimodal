@@ -14,3 +14,8 @@ python -m torch.distributed.launch --nproc_per_node=4 --master_port 61201 --use_
 
 
 ## 4.8.1 transformers 之前的
+
+
+
+## Pretrain on the self-cifar-10 dataset
+python -m torch.distributed.launch --nproc_per_node=4 --master_port 61201 --use_env pretrain.py --distributed 

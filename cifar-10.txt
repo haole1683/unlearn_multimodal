@@ -1,0 +1,4 @@
+Linear probe:
+    pretrain on my constructed dataset linear probe eva result : 95.020 %
+    pretrain of official RN50 CLIP, linear probe eva result : Accuracy = 86.780
+    pretrain of official ViT-B/32 CLIP, linear probe eva result : Accuracy = 95.020
