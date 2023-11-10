@@ -395,7 +395,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/cifar10.yaml') 
 
-    parser.add_argument('--checkpoint', default='/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth')   
+    parser.add_argument('--checkpoint', default='')   
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)

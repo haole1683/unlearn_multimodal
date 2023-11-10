@@ -8,20 +8,30 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
 
+from PIL import Image
+
 # Load the model
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-model, preprocess = clip.load('RN50', device)
-# model, preprocess = clip.load('ViT-B/32', device)
+# check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth"
 
-check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth"
-checkpoint = torch.load(check_point_path, map_location='cpu') 
-model.load_state_dict(checkpoint['model'])
+# model, preprocess = clip.load(check_point_path, device)
+model, preprocess = clip.load('RN50', device)
+# make sure to convert the model parameters to fp32
+model = model.float()
+model = model.to(device) 
+model = model.eval()
+
+# checkpoint = torch.load(check_point_path, map_location='cpu') 
+# model.load_state_dict(checkpoint['model'])
+
+
 
 # Load the dataset
 root = os.path.expanduser("~/.cache")
 train = CIFAR10(root, download=True, train=True, transform=preprocess)
 test = CIFAR10(root, download=True, train=False, transform=preprocess)
+
 
 
 def get_features(dataset):
@@ -34,7 +44,17 @@ def get_features(dataset):
 
             # judge the feature whether has nan
             if torch.isnan(features).any():
-                print("has nan")
+                for index in range(len(features)):
+                    if torch.isnan(features[index]).any():
+                        features = model.encode_image(images.to(device))
+                        print("has nan")
+                        img_tensor = images[index]
+                        img_tensor = img_tensor.cpu().numpy()
+                        img_tensor = np.transpose(img_tensor, (1, 2, 0))
+                        img_tensor = img_tensor * 255
+                        img_tensor = img_tensor.astype(np.uint8)
+                        img = Image.fromarray(img_tensor)
+                        img.save("has_nan.jpg")
                 continue
             
             all_features.append(features)

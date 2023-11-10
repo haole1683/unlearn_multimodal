@@ -1,4 +1,16 @@
 Linear probe:
-    pretrain on my constructed dataset linear probe eva result : 95.020 %
-    pretrain of official RN50 CLIP, linear probe eva result : Accuracy = 86.780
+    pretrain on my constructed dataset linear probe eva result : Accuracy = 41.590
+    pretrain of official RN50 CLIP, linear probe eva result : Accuracy = 86.750
     pretrain of official ViT-B/32 CLIP, linear probe eva result : Accuracy = 95.020
+
+zero-shot:
+    pretrained on my constructed dataset zero-shot eva result : Accuracy = 19.45 (Top 1 of CIFAR10),  56.13 (Top 5 of CIFAR10)
+    pretrained on official RN50 CLIP, zero-shot eva result : Accuracy = 71.52 (Top 1 of CIFAR10),  98.14 (Top 5 of CIFAR10)
+    pretrained on official ViT-B/32 CLIP, zero-shot eva result : Accuracy = 89.86 (Top 1 of CIFAR10),  99.62 (Top 5 of CIFAR10)
+
+zero-shot:
+    new dataset from TEXT-driven dataset
+    pretrained on official RN50 CLIP, zero-shot eva result : Accuracy = 19.06 (Top 1 of CIFAR10),  63.30 (Top 5 of CIFAR10)
+
+    in training dataset
+    top 1 : 18.85   Top - 5 : 62.58

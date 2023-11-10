@@ -4,3 +4,6 @@
 *.pyc
 *.jar
 tmp*
+*.pt
+*.png
+*.jpg
