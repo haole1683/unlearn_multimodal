@@ -1,2 +1,6 @@
 loss function : max-loss the loss can be quite large via adding noise into the training dataset
 loss function : min-loss the loss can not be converage via adding noise into the training dataset
+
+Fuck pytorch version :
+Nan when useing pytorch2
+Normal when use pytorch1.7

@@ -1,6 +1,5 @@
 import argparse
 import os
-import ruamel.yaml as yaml
 import numpy as np
 import random
 import time
@@ -395,7 +394,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/cifar10.yaml') 
 
-    parser.add_argument('--checkpoint', default='')   
+    parser.add_argument('--checkpoint', default='/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth')   
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
@@ -413,9 +412,17 @@ if __name__ == '__main__':
     parser.add_argument('--poisoned_ratio', default=1.0, type=float)
     
     args = parser.parse_args()
-
-    config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    
+    try:
+        from ruamel.yaml import YAML
+        yaml=YAML(typ='safe')   
+        config = yaml.load(open(args.config, 'r'))
+    except:
+        import ruamel.yaml as yaml
+        config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    
     config = {**config['common'], **config['Pretrain']}
+    
     
     Path(config['output_dir']).mkdir(parents=True, exist_ok=True)
         

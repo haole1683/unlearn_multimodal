@@ -7,14 +7,9 @@ import numpy as np
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load('RN50', device)
 
-# model, preprocess = clip.load(check_point_path, device)
-# model, preprocess = clip.load('RN50', device)
-# make sure to convert the model parameters to fp32
-# model = model.float()
-# model = model.to(device) 
-# check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth"
-# checkpoint = torch.load(check_point_path, map_location='cpu') 
-# model.load_state_dict(checkpoint['model'])
+check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth"
+checkpoint = torch.load(check_point_path, map_location='cpu') 
+model.load_state_dict(checkpoint['model'])
 
 # from https://github.com/openai/CLIP/blob/main/data/prompts.md
 mnist_classes = ['0','1','2','3','4','5','6','7','8','9',]
