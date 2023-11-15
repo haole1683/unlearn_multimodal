@@ -13,7 +13,7 @@ model, preprocess = clip.load('RN50', device)
 # make sure to convert the model parameters to fp32
 model = model.float()
 model = model.to(device) 
-check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_64.pth"
+check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_31.pth"
 checkpoint = torch.load(check_point_path, map_location='cpu') 
 model.load_state_dict(checkpoint['model'])
 

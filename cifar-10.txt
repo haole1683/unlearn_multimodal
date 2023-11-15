@@ -14,3 +14,11 @@ zero-shot:
 
     in training dataset
     top 1 : 18.85   Top - 5 : 62.58
+
+Not trained - 1 epoch:
+    Top-1 accuracy: 6.90
+    Top-5 accuracy: 47.61   
+
+Not trained - 31 epoch:
+    Top-1 accuracy: 18.41
+    Top-5 accuracy: 64.55 
