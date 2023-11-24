@@ -66,7 +66,7 @@ Pretrain:
   optimizer: {opt: adamW, lr:  0.0005, betas: (0.0, 0.9),eps: 1.0e-6, weight_decay: 1e-3}
   schedular: {sched: cosine, lr: 0.0005, epochs: 65, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 15, cooldown_epochs: 0}
   
-  output_dir: 'output/cifar10-Pretrain-2/'
+  output_dir: 'output/cifar10-Pretrain/'
 
 
 

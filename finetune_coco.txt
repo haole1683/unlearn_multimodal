@@ -1,0 +1,1 @@
+https://keremturgutlu.github.io/self_supervised/01%20-%20training_clip_coco.html#CLIP-COCO-Captions-Tutorial
