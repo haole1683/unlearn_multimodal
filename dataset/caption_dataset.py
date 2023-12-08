@@ -75,9 +75,11 @@ class re_eval_dataset(Dataset):
         
         image_path = os.path.join(self.image_root, self.ann[index]['image'])        
         image = Image.open(image_path).convert('RGB')    
-        image = self.transform(image)  
+        image = self.transform(image)
+        
+        text = self.ann[index]['caption'][0]
 
-        return image, index
+        return image, text,index
       
         
 
@@ -150,13 +152,16 @@ class re_poisoned_train_dataset(Dataset):
 class re_train_dataset_with_anno(Dataset):
     def __init__(self, ann_file, transform, image_root, max_words=30):        
         self.ann = []
-        for f in ann_file:
-            self.ann += json.load(open(f,'r'))
+        if isinstance(ann_file, str):
+            self.ann += json.load(open(ann_file, 'r'))
+        else:
+            for f in ann_file:
+                self.ann += json.load(open(f, 'r'))
         self.transform = transform
         self.image_root = image_root
         self.max_words = max_words
-        self.img_ids = {}   
-        
+        self.img_ids = {}
+
         n = 0
         for ann in self.ann:
             img_id = ann['image_id']

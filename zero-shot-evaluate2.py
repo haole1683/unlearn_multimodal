@@ -13,15 +13,15 @@ model, preprocess = clip.load('RN50', device)
 # make sure to convert the model parameters to fp32
 model = model.float()
 model = model.to(device) 
-check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain/checkpoint_epoch_65.pth"
+check_point_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/cifar10-Pretrain-1/checkpoint_epoch_64.pth"
 checkpoint = torch.load(check_point_path, map_location='cpu') 
 model.load_state_dict(checkpoint['model'])
 
 
 # mnist = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=preprocess)
-cifar10 = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=preprocess)
+cifar10 = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=preprocess)
 
-cifar10_loader = torch.utils.data.DataLoader(cifar10, batch_size=100, shuffle=False)
+cifar10_loader = torch.utils.data.DataLoader(cifar10, batch_size=256, shuffle=False)
 loader = cifar10_loader
 
 
@@ -78,19 +78,6 @@ def accuracy(output, target, topk=(1,)):
 cifar10_classes = class_map['CIFAR10']
 cifar10_templates = template_map['CIFAR10']
 
-def zeroshot_classifier(classnames, templates):
-    with torch.no_grad():
-        zeroshot_weights = []
-        for classname in tqdm(classnames):
-            texts = [template.format(classname) for template in templates] #format with class
-            texts = clip.tokenize(texts).cuda() #tokenize
-            class_embeddings = model.encode_text(texts) #embed with text encoder
-            class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
-            class_embedding = class_embeddings.mean(dim=0)
-            class_embedding /= class_embedding.norm()
-            zeroshot_weights.append(class_embedding)
-        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
-    return zeroshot_weights
 
 
 zeroshot_weights = zeroshot_classifier(cifar10_classes, cifar10_templates)

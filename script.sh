@@ -12,6 +12,9 @@ python -m torch.distributed.launch --nproc_per_node=4 --master_port 61201 --use_
 python -m torch.distributed.launch --nproc_per_node=4 --master_port 61201 --use_env retrieval_by_CLIP.py --distributed --freeze_encoder text
 python -m torch.distributed.launch --nproc_per_node=4 --master_port 61201 --use_env retrieval_by_CLIP.py --distributed --poisoned --freeze_encoder text
 
+# train data on clean dataset: 
+### Flickr-PASCAL dataset ###
+python -m torch.distributed.launch --nproc_per_node=1 --master_port 61201 --use_env retrieval_by_CLIP.py --distributed --config configs/clip_poison_pascal.yaml --overload_config --output_dir output/pascal_sheep2aeroplane_1.0/ --poisoned_file poisoned_data/pascal_train_sheep2aeroplane_1.0.json --target_txt_cls sheep --target_img_cls aeroplane --poisoned_goal sheep2aeroplane 
 
 ## 4.8.1 transformers 之前的
 
