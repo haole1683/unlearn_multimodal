@@ -225,7 +225,6 @@ def main(args):
 
     
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()     
     parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth")   
     parser.add_argument('--device', default='cuda:0')
@@ -239,8 +238,8 @@ if __name__ == '__main__':
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
     parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
-    # config overload
-    parser.add_argument('--poisoned_ratio', default=1.0, type=float)
+
+    parser.add_argument('--attack_ratio', default=1.0, type=float)
     
     args = parser.parse_args()
     
