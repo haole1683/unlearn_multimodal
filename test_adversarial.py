@@ -11,7 +11,7 @@ from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 import utils
 
-device = "cuda:1" if torch.cuda.is_available() else "cpu"
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 model, preprocess = clip.load('ViT-B/32', device)
 # make sure to convert the model parameters to fp32
@@ -38,22 +38,22 @@ generator.to(device)
 
 
 # cifar10 = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
-# cifar100 = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
-imageNet = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=myTransform)
+cifar100 = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
+# imageNet = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=myTransform)
 # cifar10_loader = torch.utils.data.DataLoader(cifar10, batch_size=64, shuffle=False)
-# cifar100_loader = torch.utils.data.DataLoader(cifar100, batch_size=64, shuffle=False)
-imageNet_loader = torch.utils.data.DataLoader(imageNet, batch_size=64, shuffle=False)
+cifar100_loader = torch.utils.data.DataLoader(cifar100, batch_size=64, shuffle=False)
+# imageNet_loader = torch.utils.data.DataLoader(imageNet, batch_size=64, shuffle=False)
 # loader = cifar10_loader
-# loader = cifar100_loader
-loader = imageNet_loader
+loader = cifar100_loader
+# loader = imageNet_loader
 
 
 # from https://github.com/openai/CLIP/blob/main/data/prompts.md
 mnist_classes = ['0','1','2','3','4','5','6','7','8','9',]
 mnist_templates = ['a photo of the number: "{}".',]
 cifar10_classes = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck',]
-# cifar100_classes = cifar100.classes
-imagenet_classes = imageNet.classes
+cifar100_classes = cifar100.classes
+# imagenet_classes = imageNet.classes
 cifar10_templates = [
     'a photo of a {}.',
     'a blurry photo of a {}.',
@@ -104,12 +104,12 @@ cifar10_classes = class_map['CIFAR10']
 cifar10_templates = template_map['CIFAR10']
 
 
-zeroshot_weights = zeroshot_classifier(imagenet_classes, cifar10_templates)
+zeroshot_weights = zeroshot_classifier(cifar100_classes, cifar10_templates)
 
 import torch.nn.functional as F
 
 use_adversarial = True
-use_random = True
+use_random = False
 
 with torch.no_grad():
     top1, top5, n = 0., 0., 0.
@@ -119,7 +119,7 @@ with torch.no_grad():
         
         # for noise generate
         target_index = target.detach().cpu().numpy()
-        text_of_classes = [imagenet_classes[i] for i in target_index]
+        text_of_classes = [cifar100_classes[i] for i in target_index]
         text_of_target_class = [cifar10_templates[0].format(class_name) for class_name in text_of_classes]
         text_tokens = clip.tokenize(text_of_target_class).to(device)
         
@@ -135,7 +135,7 @@ with torch.no_grad():
             delta_im = gen_image
         
         norm_type = 'l2'
-        epsilon = 8
+        epsilon = 0
         if norm_type == "l2":
             temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
             delta_im = delta_im * epsilon / temp
