@@ -4,3 +4,30 @@ loss function : min-loss the loss can not be converage via adding noise into the
 Fuck pytorch version :
 Nan when useing pytorch2
 Normal when use pytorch1.7
+
+
+
+max_clip_loss_generator:  preTrain model : ViT-B/32
+Natural zero-shot cifar-10 test_set :
+Top-1 accuracy: 88.52
+Top-5 accuracy: 99.39
+Generate noise of downstream CIFAR-10 dataset:  
+Top-1 accuracy: 24.19
+Top-5 accuracy: 56.79
+Random delta:
+Top-1 accuracy: 84.63
+Top-5 accuracy: 99.12
+
+the noise from generator can be generalize to other dataset
+
+
+max_clip_loss_generator:  preTrain model : ViT-B/32
+Natural zero-shot cifar-100 test_set :
+Top-1 accuracy: 61.39
+Top-5 accuracy: 86.87
+Generate noise of downstream CIFAR-100 dataset: 
+Top-1 accuracy: 9.13
+Top-5 accuracy: 20.62
+Random delta:
+Top-1 accuracy: 59.23
+Top-5 accuracy: 85.25
