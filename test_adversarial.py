@@ -11,7 +11,7 @@ from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 import utils
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda:1" if torch.cuda.is_available() else "cpu"
 
 model, preprocess = clip.load('ViT-B/32', device)
 # make sure to convert the model parameters to fp32
@@ -31,7 +31,7 @@ myNormalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862
 generator_checkpoint = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth"
 generator = NetG()
 generator = generator.to(device)
-checkpoint = torch.load(generator_checkpoint)
+checkpoint = torch.load(generator_checkpoint, map_location=device)
 generator.load_state_dict(checkpoint['model'])
 generator.to(device)
 
@@ -39,7 +39,7 @@ generator.to(device)
 
 # cifar10 = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
 # cifar100 = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
-imageNet = ImageNet(root="/remote-home/share/imagenet/", download=False, split='val', transform=myTransform)
+imageNet = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=myTransform)
 # cifar10_loader = torch.utils.data.DataLoader(cifar10, batch_size=64, shuffle=False)
 # cifar100_loader = torch.utils.data.DataLoader(cifar100, batch_size=64, shuffle=False)
 imageNet_loader = torch.utils.data.DataLoader(imageNet, batch_size=64, shuffle=False)
@@ -81,13 +81,13 @@ def zeroshot_classifier(classnames, templates):
         zeroshot_weights = []
         for classname in tqdm(classnames):
             texts = [template.format(classname) for template in templates] #format with class
-            texts = clip.tokenize(texts).cuda() #tokenize
+            texts = clip.tokenize(texts).to(device) #tokenize
             class_embeddings = model.encode_text(texts) #embed with text encoder
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings.mean(dim=0)
             class_embedding /= class_embedding.norm()
             zeroshot_weights.append(class_embedding)
-        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
+        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).to(device)
     return zeroshot_weights
 
 
@@ -108,20 +108,20 @@ zeroshot_weights = zeroshot_classifier(imagenet_classes, cifar10_templates)
 
 import torch.nn.functional as F
 
-use_adversarial = False
+use_adversarial = True
 use_random = True
 
 with torch.no_grad():
     top1, top5, n = 0., 0., 0.
     for i, (images, target) in enumerate(tqdm(loader)):
-        images = images.cuda()
-        target = target.cuda()
+        images = images.to(device)
+        target = target.to(device)
         
         # for noise generate
         target_index = target.detach().cpu().numpy()
         text_of_classes = [imagenet_classes[i] for i in target_index]
         text_of_target_class = [cifar10_templates[0].format(class_name) for class_name in text_of_classes]
-        text_tokens = clip.tokenize(text_of_target_class).cuda()
+        text_tokens = clip.tokenize(text_of_target_class).to(device)
         
         batch_size = images.size(0)
         noise = torch.randn(batch_size, 100).to(device)
