@@ -6,7 +6,9 @@ import numpy as np
 from tqdm import tqdm
 
 from torchvision import transforms
-
+from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import InterpolationMode
+BICUBIC = InterpolationMode.BICUBIC
 from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 import utils
@@ -18,14 +20,27 @@ model, preprocess = clip.load('ViT-B/32', device)
 model = model.float()
 model = model.to(device) 
 
-myTransform = transforms.Compose([
-    transforms.Resize((224,224)),
-    
-    transforms.ToTensor(),
-    # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-])
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
 
-myNormalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+# normalize from clip.py
+def _transform(n_px):
+    return Compose([
+        Resize(n_px, interpolation=BICUBIC),
+        CenterCrop(n_px),
+        _convert_image_to_rgb,
+        ToTensor(),
+        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+
+# [224,224]
+clip_transform = transforms.Compose([
+    Resize((224,224),interpolation=BICUBIC),
+    CenterCrop(224),
+    _convert_image_to_rgb,
+    ToTensor(),
+])
+clip_normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
 
 
 generator_checkpoint = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth"
@@ -38,7 +53,7 @@ generator.to(device)
 
 
 # cifar10 = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
-cifar100 = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=myTransform)
+cifar100 = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=clip_transform)
 # imageNet = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=myTransform)
 # cifar10_loader = torch.utils.data.DataLoader(cifar10, batch_size=64, shuffle=False)
 cifar100_loader = torch.utils.data.DataLoader(cifar100, batch_size=64, shuffle=False)
@@ -147,13 +162,13 @@ with torch.no_grad():
         
         # add delta(noise) to image
         images_adv = torch.clamp(images + delta_im, min=0, max=1)
-        images_adv = myNormalize(images_adv)
+        images_adv = clip_transform(images_adv)
         
         # predict
         if use_adversarial:
             image_features = model.encode_image(images_adv)
         else:
-            images = myNormalize(images)
+            images = clip_transform(images)
             image_features = model.encode_image(images)
         image_features /= image_features.norm(dim=-1, keepdim=True)
         logits = 100. * image_features @ zeroshot_weights
