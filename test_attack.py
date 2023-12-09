@@ -98,7 +98,8 @@ def main(args):
     checkpoint_path = args.checkpoint
     generator = NetG()
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    generator.load_state_dict(checkpoint['model']).to(device)
+    generator.load_state_dict(checkpoint['model'])
+    generator = generator.to(device)
     
     # load dataset
     dataset_name = args.dataset
@@ -120,14 +121,14 @@ def main(args):
     
     class_names = dataset.classes
     
-    zeroshot_weights = zeroshot_classifier(clip_model, device, class_names, prompt_templates)
+    zeroshot_weights = zeroshot_classifier(model, device, class_names, prompt_templates)
     
     # test
     test_method = args.test_method
     if test_method == 'clean':
         clean_test = True
         use_random = False
-    elif test_method == 'adversarial':
+    elif test_method == 'generator':
         clean_test = False
         use_random = False
     elif test_method == 'random':
@@ -150,7 +151,8 @@ def main(args):
                 target_index = target.detach().cpu().numpy()
                 text_of_classes = [class_names[i] for i in target_index]
                 # use the first prompt template
-                text_of_target_class = [prompt_templates[0].format(class_name) for class_name in text_of_classes]
+                rand_index = np.random.randint(0, len(prompt_templates))
+                text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
                 text_tokens = clip.tokenize(text_of_target_class).to(device)
                 
                 batch_size = images.size(0)
@@ -206,12 +208,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--clip_model', default='ViT-B/32', type=str)
     
-    parser.add_argument('--test_method', default='clean', choices=['clean', 'adversarial', 'random'])
+    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
+    parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
     # config overload
     parser.add_argument('--poisoned_ratio', default=1.0, type=float)
     
