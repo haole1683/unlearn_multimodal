@@ -149,7 +149,7 @@ with torch.no_grad():
         else:
             delta_im = gen_image
         
-        norm_type = 'linf'
+        norm_type = 'l2'
         epsilon = 8
         if norm_type == "l2":
             temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
@@ -162,13 +162,13 @@ with torch.no_grad():
         
         # add delta(noise) to image
         images_adv = torch.clamp(images + delta_im, min=0, max=1)
-        images_adv = clip_transform(images_adv)
+        images_adv = clip_normalize(images_adv)
         
         # predict
         if use_adversarial:
             image_features = model.encode_image(images_adv)
         else:
-            images = clip_transform(images)
+            images = clip_normalize(images)
             image_features = model.encode_image(images)
         image_features /= image_features.norm(dim=-1, keepdim=True)
         logits = 100. * image_features @ zeroshot_weights
