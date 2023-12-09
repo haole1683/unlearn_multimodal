@@ -18,6 +18,24 @@ import utils
 
 import torch.nn.functional as F
 
+def record_result(args, result):
+    csv_path = "./record/record.csv"
+    if not os.path.exists(csv_path):
+        with open(csv_path, "w") as f:
+            f.write("checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
+    top1 = result["top1"]
+    top5 = result["top5"]
+    
+    checkpoint_path = args.checkpoint
+    dataset = args.dataset
+    model = args.clip_model
+    test_method = args.test_method
+    norm_type = args.norm_type
+    epsilon = args.epsilon
+    with open(csv_path, "a") as f:
+        f.write(f"{checkpoint_path},{dataset}, {model}, {test_method}, {norm_type}, {epsilon}, {top1}, {top5}\n")
+    print('done!')
+
 # normalize from clip.py
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
@@ -197,6 +215,13 @@ def main(args):
 
     print(f"Top-1 accuracy: {top1:.2f}")
     print(f"Top-5 accuracy: {top5:.2f}")
+    
+    result = {
+        "top1": top1,
+        "top5": top5
+    }
+    
+    return result
 
     
 if __name__ == '__main__':
@@ -219,4 +244,6 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    main(args)
+    result = main(args)
+
+    record_result(args, result)

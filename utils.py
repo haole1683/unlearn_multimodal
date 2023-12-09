@@ -285,3 +285,4 @@ def setup_logging(log_file, level):
         file_handler = logging.FileHandler(filename=log_file)
         file_handler.setFormatter(formatter)
         logging.root.addHandler(file_handler)
+        
