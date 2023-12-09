@@ -230,9 +230,9 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/32', type=str)
+    parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
-    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
+    parser.add_argument('--test_method', default='clean', choices=['clean', 'generator', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
