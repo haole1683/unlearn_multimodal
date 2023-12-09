@@ -134,8 +134,8 @@ with torch.no_grad():
         else:
             delta_im = gen_image
         
-        norm_type = 'l2'
-        epsilon = 0
+        norm_type = 'linf'
+        epsilon = 8
         if norm_type == "l2":
             temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
             delta_im = delta_im * epsilon / temp
