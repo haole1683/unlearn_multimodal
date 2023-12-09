@@ -7,3 +7,4 @@ tmp*
 *.pt
 *.png
 *.jpg
+/output_ori/

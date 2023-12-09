@@ -97,6 +97,12 @@ def create_dataset(dataset, config):
         val_dataset = re_eval_dataset(config['val_file'], test_transform, config['image_root'])  
         test_dataset = re_eval_dataset(config['test_file'], test_transform, config['image_root']) 
         return train_dataset, val_dataset, test_dataset
+    
+    elif dataset=='train_generator':     # clean dataset, use for generate poisoning dataset
+        train_dataset = re_train_dataset(config['train_file'], train_transform, config['image_root'])
+        val_dataset = re_eval_dataset(config['val_file'], test_transform, config['image_root'])  
+        test_dataset = re_eval_dataset(config['test_file'], test_transform, config['image_root']) 
+        return train_dataset, val_dataset, test_dataset
 
     elif dataset=='adversarial_test_dataset':     # clean dataset, use for generate poisoning dataset
         train_dataset = re_train_dataset_with_anno(config['train_file'], train_transform, config['image_root'])

@@ -1,7 +1,7 @@
 common:
   # model attacked
   model: 'clip'
-  clip_model: 'ViT-B/32'
+  clip_model: 'ViT-B/16'
 
   # dataset protected
   dataset: 'flickr'
@@ -49,7 +49,7 @@ step3:  # finetune in downstream dataset
 
   # clip finetune setting
   optimizer: {opt: adamW, lr: 1e-5, betas: (0.9, 0.98), eps: 1.0e-6, weight_decay: 0.2}
-  schedular: {sched: cosine, lr: 1e-5, epochs: 15, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
+  schedular: {sched: cosine, lr: 1e-5, epochs: 30, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
   
   poison_delta_root: "/remote-home/songtianwei/research/unlearn_multimodal/datasets/poison_max_loss/flickr/poison_data"
   output_dir: 'output/flickr/clip_retrieval'

@@ -47,6 +47,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         image = image.to(device,non_blocking=True)   
         idx = idx.to(device,non_blocking=True)   
         text = tokenizer(text, truncate=True).to(device)
+        # text = tokenizer(text, padding='longest', max_length=30, return_tensors="pt").to(device) 
         
         # encode text to get text embedding
         text_embedding = model.module.encode_text(text)
@@ -85,7 +86,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
         total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
-        loss = -total_loss
+        loss = total_loss
 
         loss.backward()
         optimizer.step()  
@@ -126,11 +127,20 @@ def main(args, config):
     cudnn.benchmark = True
     
     generator = NetG()
+    if args.checkpoint is None or not os.path.exists(args.checkpoint):
+        logging.info("No checkpoint provided. Please run train_generator first.")
+        raise "No checkpoint provided"
+    else:
+        logging.info("loading from " + args.checkpoint)
+        checkpoint = torch.load(args.checkpoint)
+        generator.load_state_dict(checkpoint['model'])
+
     generator = generator.to(device)
     
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
+    #### CLIP Model ####   # TODO : let attack model train or freeze
     clip_model = args.clip_model
     logging.info("Creating attacked model - CLIP {}".format(clip_model))
     model, _ = clip.load(clip_model, device, jit=False)
@@ -149,7 +159,7 @@ def main(args, config):
 
     #### Dataset #### 
     logging.info("Creating clean dataset for {}".format(config['dataset']))
-    train_dataset, test_dataset, val_dataset = create_dataset('train_generator', config)
+    train_dataset, test_dataset, val_dataset = create_dataset('re_gen_poison', config)
     logging.info(f"Training dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}, Testing dataset size:{len(test_dataset)}")  
 
     if args.distributed:
@@ -185,28 +195,28 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/gen_Flickr.yaml')
     
+    parser.add_argument('--checkpoint', default=None)   
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    parser.add_argument('--distributed', action="store_true")
     parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
     # noise limit
     parser.add_argument('--norm_type', default='l2', type=str, choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int, help='perturbation')
 
-    # distributed training
-    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
-    parser.add_argument('--distributed', action="store_true")
+    # output
+    parser.add_argument('--output_dir', default='')
     
     args = parser.parse_args()
     
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    config = {**config['common'], **config['step1']}
 
-    clip_model_str = args.clip_model.replace('/', '_')
-    output_dir = "./output/gen_{}_{}".format(config['dataset'], clip_model_str)
-    config.update({'output_dir': output_dir})
-    
-    Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)
-    yaml.dump(config, open(os.path.join(config["output_dir"], 'config.yaml'), 'w')) 
+    Path(config['output_dir']).mkdir(parents=True, exist_ok=True)
+        
+    yaml.dump(config, open(os.path.join(config['output_dir'], 'config.yaml'), 'w')) 
 
     main(args, config)

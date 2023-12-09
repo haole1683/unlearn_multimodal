@@ -1,0 +1,28 @@
+# dataset protected
+dataset: 'flickr'
+
+# dataset json file
+train_file:  ['/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_train.json']
+val_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_val.json'                
+test_file: '/remote-home/songtianwei/research/unlearn_multimodal/data/flickr30k_test.json'
+
+# dataset path
+image_root: '/remote-home/songtianwei/research/albef/ALBEF/datasets/' #flickr30k-images/
+
+alpha: 0.4
+distill: True
+warm_up: True
+
+batch_size_train: 24  
+batch_size_test: 64
+image_res: 224
+max_words: 77
+# generator training setting
+optimizer: {opt: adamW, lr: 0.0001, betas: (0.0, 0.9)}
+schedular: {sched: cosine, lr: 1e-5, epochs: 50, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
+
+
+
+
+
+
