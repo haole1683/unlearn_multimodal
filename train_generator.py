@@ -126,8 +126,6 @@ def main(args, config):
     cudnn.benchmark = True
     
     generator = NetG()
-    # checkpoint = torch.load("/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth", map_location=device)
-    # generator.load_state_dict(checkpoint['model'])
     generator = generator.to(device)
     
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
@@ -178,6 +176,7 @@ def main(args, config):
             'lr_scheduler': schedulerG.state_dict(),
             'config': config,
             'epoch': epoch,
+            'clip_loss': train_stats['total_loss'],
         }
         torch.save(save_obj, os.path.join(config['output_dir'], f'checkpoint_epoch_{epoch+1}.pth'))  
 
