@@ -3,3 +3,5 @@ checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5
 /remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth,CIFAR100, ViT-B/32, generator, l2, 8, 12.920000000000002, 27.13
 /remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth,CIFAR100, ViT-B/16, generator, l2, 8, 48.94, 78.03
 /remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth,CIFAR100, ViT-B/16, clean, l2, 8, 66.91, 89.27000000000001
+/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR100, ViT-B/16, clean, l2, 8, 66.91, 89.27000000000001
+/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR100, ViT-B/16, generator, l2, 8, 20.46, 34.599999999999994

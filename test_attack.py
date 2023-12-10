@@ -155,7 +155,7 @@ def main(args):
     else:
         raise NotImplementedError
     
-    
+    fix_index = False
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for i, (images, target) in enumerate(tqdm(dataloader)):
@@ -170,6 +170,8 @@ def main(args):
                 text_of_classes = [class_names[i] for i in target_index]
                 # use the first prompt template
                 rand_index = np.random.randint(0, len(prompt_templates))
+                if fix_index:   # fix the index of rand index to 0
+                    rand_index = 0
                 text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
                 text_tokens = clip.tokenize(text_of_target_class).to(device)
                 
@@ -226,13 +228,13 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/train_generator_max_loss/checkpoint_epoch_10.pth")   
+    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth")   
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
-    parser.add_argument('--test_method', default='clean', choices=['clean', 'generator', 'random'])
+    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)

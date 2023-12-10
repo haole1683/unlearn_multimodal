@@ -55,3 +55,6 @@ Top-5 accuracy: 53.04
 Random delta: δ = 8   l2 norm
 Top-1 accuracy: 55.82
 Top-5 accuracy: 83.49
+
+
+Train a generator for 50 epoch on 4 3090 gpu requires about 15 hours in Flickr Dataset(14 0000 pairs).
