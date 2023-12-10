@@ -22,18 +22,23 @@ def record_result(args, result):
     csv_path = "./record/record.csv"
     if not os.path.exists(csv_path):
         with open(csv_path, "w") as f:
-            f.write("dataset, clip_model, epoch, checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
+            f.write("gen_dataset, gen_clip_model, gen_epoch, checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
     top1 = result["top1"]
     top5 = result["top5"]
     
     checkpoint_path = args.checkpoint
+    # gen_flickr_ViT-B-16
+    folder_name = checkpoint_path.split("/")[-2]
+    gen_dataset = folder_name.split("_")[1]
+    gen_clip_model = folder_name.split("_")[2]
+    gen_epoch = checkpoint_path.split("/")[-1].split(".")[0].split("_")[-1]
     dataset = args.dataset
     model = args.clip_model
     test_method = args.test_method
     norm_type = args.norm_type
     epsilon = args.epsilon
     with open(csv_path, "a") as f:
-        f.write(f"{checkpoint_path},{dataset}, {model}, {test_method}, {norm_type}, {epsilon}, {top1}, {top5}\n")
+        f.write(f"{gen_dataset}, {gen_clip_model}, {gen_epoch}, {checkpoint_path},{dataset}, {model}, {test_method}, {norm_type}, {epsilon}, {top1}, {top5}\n")
     print('done!')
 
 # normalize from clip.py

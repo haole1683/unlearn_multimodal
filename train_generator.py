@@ -204,7 +204,7 @@ if __name__ == '__main__':
     
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
-    clip_model_str = args.clip_model.replace('/', '_')
+    clip_model_str = args.clip_model.replace('/', '-')
     output_dir = "./output/temp_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
