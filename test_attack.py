@@ -253,7 +253,7 @@ if __name__ == '__main__':
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
+    parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
 
     parser.add_argument('--attack_ratio', default=1.0, type=float)
     
