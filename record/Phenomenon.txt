@@ -7,7 +7,7 @@ Normal when use pytorch1.7
 
 
 white box attack ?
-
+同一个generate，不需要额外优化图像，完成攻击。
 
 max_clip_loss_generator:  preTrain model : ViT-B/32  dataset: cifar-10
 Natural zero-shot cifar-10 test_set :

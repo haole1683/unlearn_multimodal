@@ -13,3 +13,5 @@ flickr, ViT-B-16, 45, 14.0978, /remote-home/songtianwei/research/unlearn_multimo
 flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 8, 44.0, 69.77
 None, None, None,None, None,CIFAR100, ViT-B/16, clean, l2, 8, 66.91, 89.27000000000001
 flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR100, ViT-B/16, generator, l2, 8, 20.44, 34.699999999999996
+None, None, None,None, None,ImageNet, ViT-B/16, clean, l2, 8, 62.336000000000006, 87.52600000000001
+flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,ImageNet, ViT-B/16, generator, l2, 8, 49.032, 75.016
