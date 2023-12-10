@@ -22,7 +22,7 @@ def record_result(args, result):
     csv_path = "./record/record.csv"
     if not os.path.exists(csv_path):
         with open(csv_path, "w") as f:
-            f.write("checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
+            f.write("dataset, clip_model, epoch, checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
     top1 = result["top1"]
     top5 = result["top5"]
     
@@ -228,13 +228,13 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth")   
+    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_5.pth")   
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
-    parser.add_argument('--test_method', default='clean', choices=['clean', 'generator', 'random'])
+    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)

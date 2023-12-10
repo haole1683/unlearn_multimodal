@@ -7,3 +7,5 @@ checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5
 /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR100, ViT-B/16, generator, l2, 8, 20.46, 34.599999999999994
 /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 8, 44.04, 69.83
 /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, clean, l2, 8, 90.8, 99.42999999999999
+/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, clean, l2, 8, 90.8, 99.42999999999999, random_of_generator
+

@@ -126,6 +126,8 @@ def main(args, config):
     cudnn.benchmark = True
     
     generator = NetG()
+    # checkpoint = torch.load("/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B_16/checkpoint_epoch_50.pth", map_location=device)
+    # generator.load_state_dict(checkpoint['model'])
     generator = generator.to(device)
     
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
@@ -203,7 +205,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '_')
-    output_dir = "./output/gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/temp_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)
