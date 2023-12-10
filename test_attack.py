@@ -234,12 +234,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
-    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
+    parser.add_argument('--test_method', default='clean', choices=['clean', 'generator', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
+    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet'])
 
     parser.add_argument('--attack_ratio', default=1.0, type=float)
     
