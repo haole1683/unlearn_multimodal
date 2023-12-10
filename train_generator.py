@@ -101,6 +101,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         if epoch==0 and batch_idx%step_size==0 and batch_idx<=warmup_iterations: 
             scheduler.step(batch_idx//step_size)  
+        break
                
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
