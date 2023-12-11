@@ -101,7 +101,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         if epoch==0 and batch_idx%step_size==0 and batch_idx<=warmup_iterations: 
             scheduler.step(batch_idx//step_size)  
-        break
+        
                
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -179,7 +179,8 @@ def main(args, config):
             'epoch': epoch,
             'clip_loss': train_stats['total_loss'],
         }
-        torch.save(save_obj, os.path.join(config['output_dir'], f'checkpoint_epoch_{epoch+1}.pth'))  
+        if epoch % 5 ==0:  # save model every 5 epochs
+            torch.save(save_obj, os.path.join(config['output_dir'], f'checkpoint_epoch_{epoch}.pth'))  
 
 
 if __name__ == '__main__':
@@ -189,7 +190,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/16', type=str)
+    parser.add_argument('--clip_model', default='RN101', type=str)
     
     # noise limit
     parser.add_argument('--norm_type', default='l2', type=str, choices=['l2', 'linf'])
@@ -205,7 +206,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/temp_gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)

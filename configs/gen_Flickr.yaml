@@ -19,7 +19,7 @@ image_res: 224
 max_words: 77
 # generator training setting
 optimizer: {opt: adamW, lr: 0.0001, betas: (0.0, 0.9)}
-schedular: {sched: cosine, lr: 1e-5, epochs: 50, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
+schedular: {sched: cosine, lr: 1e-5, epochs: 200, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, save_freq: 1, warmup_epochs: 1, cooldown_epochs: 0}
 
 
 
