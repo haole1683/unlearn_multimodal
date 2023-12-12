@@ -115,26 +115,6 @@ def accuracy(output, target, topk=(1,)):
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
-def gen_perturbation(generator,text_embedding, images, args):
-    batch_size = images.shape[0]
-    sec_emb = text_embedding
-    device = args.device
-    noise = torch.randn(batch_size, 100).to(device)
-    gen_image, _ = generator(noise, sec_emb)
-    delta_im = gen_image
-    norm_type = args.norm_type
-    epsilon = args.epsilon
-    if norm_type == "l2":
-        temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
-        delta_im = delta_im * epsilon / temp
-    elif norm_type == "linf":
-        delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
-
-    delta_im = delta_im.to(images.device)
-    delta_im = F.interpolate(delta_im, (images.shape[-2], images.shape[-1]))
-    
-    return delta_im
-    
 
 def main(args):
     device = args.device
@@ -191,13 +171,23 @@ def main(args):
     else:
         raise NotImplementedError
     
-    fix_index = False
-    if args.attack_type == "universal":
-        prompt = "A photo of"
-        prompt_tokens = clip.tokenize([prompt]).to(device)
-        prompt_embedding = model.encode_text(prompt_tokens)
-        delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)
-        
+    text_of_target_class = [prompt_templates[0].format("asdfadfsaa")]
+    text_tokens = clip.tokenize(text_of_target_class).to(device)
+    
+    noise = torch.randn(1, 100).to(device)
+    text_embedding = model.encode_text(text_tokens)
+    sec_emb = text_embedding
+    gen_image, _ = generator(noise, sec_emb)
+    delta_im = gen_image
+    
+    norm_type = args.norm_type
+    epsilon = args.epsilon
+    if norm_type == "l2":
+        temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
+        delta_im = delta_im * epsilon / temp
+    elif norm_type == "linf":
+        delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
+    
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for i, (images, target) in enumerate(tqdm(dataloader)):
@@ -207,24 +197,13 @@ def main(args):
             if clean_test:
                 images = clip_normalize(images)
                 image_features = model.encode_image(images)
-            elif args.attack_type == "universal":
-                images_adv = torch.clamp(images + delta_im, min=0, max=1)
-                images_adv = clip_normalize(images_adv)
-                image_features = model.encode_image(images_adv)
-            elif args.attack_type == "sample":
-                target_index = target.detach().cpu().numpy()
-                text_of_classes = [class_names[i] for i in target_index]
-                # use the first prompt template
-                rand_index = np.random.randint(0, len(prompt_templates))
-                if fix_index:   # fix the index of rand index to 0
-                    rand_index = 0
-                text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
-                text_tokens = clip.tokenize(text_of_target_class).to(device)
-                text_embedding = model.encode_text(text_tokens)
-                delta_im = gen_perturbation(generator, text_embedding, images, args)
+            else:
+                delta_im = delta_im.to(images.device)
+                delta_im = F.interpolate(delta_im, (images.shape[-2], images.shape[-1]))
                 # add delta(noise) to image
                 images_adv = torch.clamp(images + delta_im, min=0, max=1)
                 images_adv = clip_normalize(images_adv)
+                
                 image_features = model.encode_image(images_adv)
                 
             image_features /= image_features.norm(dim=-1, keepdim=True)
@@ -256,15 +235,14 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/16', type=str)
+    parser.add_argument('--clip_model', default='ViT-B/16', type=str, choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'ViT-L/14'])
     
     parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
-    parser.add_argument('--attack_type', default='sample', choices=['sample', 'universal'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
-    parser.add_argument('--epsilon', default=8, type=int)
+    parser.add_argument('--epsilon', default=16, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='STL10', choices=['MNIST', 'STL10', 'CIFAR10', 'CIFAR100', 'ImageNet'])
+    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'STL10', 'CIFAR10', 'CIFAR100', 'ImageNet'])
 
     parser.add_argument('--attack_ratio', default=1.0, type=float)
     
