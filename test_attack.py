@@ -177,21 +177,6 @@ def main(args):
     
     zeroshot_weights = zeroshot_classifier(model, device, class_names, prompt_templates)
     
-    # test
-    test_method = args.test_method
-    if test_method == 'clean':
-        clean_test = True
-        use_random = False
-    elif test_method == 'generator':
-        clean_test = False
-        use_random = False
-    elif test_method == 'random':
-        clean_test = False
-        use_random = True
-    else:
-        raise NotImplementedError
-    
-    fix_index = False
     if args.attack_type == "universal":
         prompt = "A photo of"
         prompt_tokens = clip.tokenize([prompt]).to(device)
@@ -204,7 +189,7 @@ def main(args):
             images = images.to(device)
             target = target.to(device)
             
-            if clean_test:
+            if args.attack_type == "clean":
                 images = clip_normalize(images)
                 image_features = model.encode_image(images)
             elif args.attack_type == "universal":
@@ -216,6 +201,7 @@ def main(args):
                 text_of_classes = [class_names[i] for i in target_index]
                 # use the first prompt template
                 rand_index = np.random.randint(0, len(prompt_templates))
+                fix_index = True
                 if fix_index:   # fix the index of rand index to 0
                     rand_index = 0
                 text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
@@ -258,8 +244,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--clip_model', default='ViT-B/16', type=str)
     
-    parser.add_argument('--test_method', default='generator', choices=['clean', 'generator', 'random'])
-    parser.add_argument('--attack_type', default='sample', choices=['sample', 'universal'])
+    parser.add_argument('--attack_type', default='sample', choices=['clean','sample', 'universal', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
