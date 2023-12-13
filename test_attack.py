@@ -22,11 +22,11 @@ def record_result(args, result):
     csv_path = "./record/record.csv"
     if not os.path.exists(csv_path):
         with open(csv_path, "w") as f:
-            f.write("gen_dataset, gen_clip_model, gen_epoch, gen_clip_loss, checkpoint_path, dataset, model, test_method, norm_type, epsilon, top1, top5\n")
+            f.write("gen_dataset, gen_clip_model, gen_epoch, gen_clip_loss, checkpoint_path, dataset, model, attack_type, norm_type, epsilon, top1, top5\n")
     top1 = result["top1"]
     top5 = result["top5"]
     
-    if args.test_method == "generator":
+    if args.attack_type != "clean":
         checkpoint_path = args.checkpoint
         # gen_flickr_ViT-B-16
         folder_name = checkpoint_path.split("/")[-2]
@@ -43,11 +43,11 @@ def record_result(args, result):
         gen_clip_loss = "None"
     dataset = args.dataset
     model = args.clip_model
-    test_method = args.test_method
+    attack_type = args.attack_type
     norm_type = args.norm_type
     epsilon = args.epsilon
     with open(csv_path, "a") as f:
-        f.write(f"{gen_dataset}, {gen_clip_model}, {gen_epoch},{gen_clip_loss}, {checkpoint_path},{dataset}, {model}, {test_method}, {norm_type}, {epsilon}, {top1}, {top5}\n")
+        f.write(f"{gen_dataset}, {gen_clip_model}, {gen_epoch},{gen_clip_loss}, {checkpoint_path},{dataset}, {model}, {attack_type}, {norm_type}, {epsilon}, {top1}, {top5}\n")
     print('done!')
 
 # normalize from clip.py
@@ -238,23 +238,22 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth")   
+    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth")   
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/16', type=str)
+    parser.add_argument('--clip_model', default='RN101', type=str)
     
     parser.add_argument('--attack_type', default='sample', choices=['clean','sample', 'universal', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='STL10', choices=['MNIST', 'STL10', 'CIFAR10', 'CIFAR100', 'ImageNet'])
-
+    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'STL10', 'CIFAR10', 'CIFAR100', 'ImageNet'])
     parser.add_argument('--attack_ratio', default=1.0, type=float)
     
     args = parser.parse_args()
     
     result = main(args)
-
+    
     record_result(args, result)

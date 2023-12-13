@@ -19,7 +19,7 @@ import torch.distributed as dist
 from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 import utils
-   
+from nce import InfoNCE
 
 def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, config):
     
@@ -28,6 +28,8 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     
     # train
     model.eval()  
+    
+    criterion_contrastive = InfoNCE()
     
     loss_image = nn.CrossEntropyLoss()
     loss_text = nn.CrossEntropyLoss()
@@ -73,6 +75,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         # add delta(noise) to image
         image_adv = torch.clamp(image + delta_im, min=0, max=1)
         # normalize the image_adv
+        image_norm = normalize_fn(image)
         image_adv_norm = normalize_fn(image_adv)
 
         # use image_adv_norm as input
@@ -81,21 +84,35 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         # zero the parameter gradients
         optimizer.zero_grad()
         
-        logits_per_image, logits_per_caption= model(image_input, text)                  
-        ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
-        total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
-        loss = -total_loss
+        clean_image_emb = model.module.encode_image(image_norm.to(device))
+        clean_text_emb = model.module.encode_text(text.squeeze().to(device))
+        adv_image_emb = model.module.encode_image(image_adv_norm.to(device))
+        
+        
+        adv_loss_pos1 = criterion_contrastive(clean_image_emb, adv_image_emb).mean()
+        adv_loss_pos2 = criterion_contrastive(adv_image_emb, clean_text_emb).mean()
+        adv_loss1 = -adv_loss_pos1
+        adv_loss2 = -adv_loss_pos2
+
+        adv_loss = adv_loss1 + args.beta * adv_loss2
+        
+        loss = adv_loss
 
         loss.backward()
         optimizer.step()  
         
+        with torch.no_grad():
+            logits_per_image, logits_per_caption= model(image_input, text)                  
+            ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
+            clip_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
+        
         # gather loss
-        reduced_loss = total_loss.clone()
+        reduced_loss = loss.clone()
         dist.reduce(reduced_loss, 0)  # average across GPUs
 
         if dist.get_rank() == 0:  # print loss
-            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {reduced_loss.item()}')
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {adv_loss.item()}, clip_loss: {clip_loss.item()}')
         
         metric_logger.update(total_loss=reduced_loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -201,12 +218,15 @@ if __name__ == '__main__':
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action="store_true")
     
+    # hyperparameters
+    parser.add_argument('--beta', default=5, type=float, help='weight for the adversarial loss')
+    
     args = parser.parse_args()
     
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/tt_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)
