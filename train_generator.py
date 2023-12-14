@@ -133,7 +133,6 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         clean_text_emb = model.module.encode_text(text.squeeze().to(device))
         adv_image_emb = model.module.encode_image(image_adv_norm.to(device))
         
-        
         adv_loss_pos1 = criterion_contrastive(clean_image_emb, adv_image_emb).mean()
         adv_loss_pos2 = criterion_contrastive(adv_image_emb, clean_text_emb).mean()
         adv_loss1 = -adv_loss_pos1
