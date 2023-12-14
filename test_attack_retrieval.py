@@ -2,7 +2,7 @@ import argparse
 import torch
 import clip
 import os
-from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10 
+from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10
 import numpy as np
 from tqdm import tqdm
 import ruamel.yaml as yaml
@@ -157,16 +157,8 @@ def main(args):
     dataset_name = args.dataset
     
     # zero-shot test dataset
-    if dataset_name == 'MNIST':
+    if dataset_name == 'Flickr':
         dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=clip_transform)
-    elif dataset_name == 'CIFAR10':
-        dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=clip_transform)
-    elif dataset_name == 'CIFAR100':
-        dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=clip_transform)
-    elif dataset_name == 'ImageNet':
-        dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=clip_transform)
-    elif dataset_name == 'STL10':
-        dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=clip_transform)
     else:
         raise NotImplementedError
 
@@ -242,14 +234,14 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='RN101', type=str)
+    parser.add_argument('--clip_model', default='RN50', type=str)
     
     parser.add_argument('--attack_type', default='sample', choices=['clean','sample', 'universal', 'random'])
     # noise limit
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'STL10', 'CIFAR10', 'CIFAR100', 'ImageNet'])
+    parser.add_argument('--dataset', default='Flickr', choices=['NUS-WIDE', 'Pascal', 'Wikipedia', 'XmediaNet', 'Flickr',])
     parser.add_argument('--attack_ratio', default=1.0, type=float)
     
     args = parser.parse_args()

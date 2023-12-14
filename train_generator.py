@@ -21,6 +21,49 @@ from models.model_gan_generator import NetG
 import utils
 from nce import InfoNCE
 
+def KL(P,Q,mask=None):
+    eps = 0.0000001
+    d = (P+eps).log()-(Q+eps).log()
+    d = P*d
+    if mask !=None:
+        d = d*mask
+    return torch.sum(d)
+def CE(P,Q,mask=None):
+    return KL(P,Q,mask)+KL(1-P,1-Q,mask)
+
+def umap(output_net, target_net, eps=0.0000001):
+    # Normalize each vector by its norm
+    (n, d) = output_net.shape
+    output_net_norm = torch.sqrt(torch.sum(output_net ** 2, dim=1, keepdim=True))
+    output_net = output_net / (output_net_norm + eps)
+    output_net[output_net != output_net] = 0
+    target_net_norm = torch.sqrt(torch.sum(target_net ** 2, dim=1, keepdim=True))
+    target_net = target_net / (target_net_norm + eps)
+    target_net[target_net != target_net] = 0
+    # Calculate the cosine similarity
+    model_similarity = torch.mm(output_net, output_net.transpose(0, 1))
+    model_distance = 1-model_similarity #[0,2]
+    model_distance[range(n), range(n)] = 3
+    model_distance = model_distance - torch.min(model_distance, dim=1)[0].view(-1, 1)
+    model_distance[range(n), range(n)] = 0
+    model_similarity = 1-model_distance
+    target_similarity = torch.mm(target_net, target_net.transpose(0, 1))
+    target_distance = 1-target_similarity
+    target_distance[range(n), range(n)] = 3
+    target_distance = target_distance - torch.min(target_distance,dim=1)[0].view(-1,1)
+    target_distance[range(n), range(n)] = 0
+    target_similarity = 1 - target_distance
+    # Scale cosine similarity to 0..1
+    model_similarity = (model_similarity + 1.0) / 2.0
+    target_similarity = (target_similarity + 1.0) / 2.0
+    # Transform them into probabilities
+    model_similarity = model_similarity / torch.sum(model_similarity, dim=1, keepdim=True)
+    target_similarity = target_similarity / torch.sum(target_similarity, dim=1, keepdim=True)
+    # Calculate the KL-divergence
+    loss = CE(target_similarity,model_similarity)
+    return loss
+
+
 def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, config):
     
     # generator train
@@ -43,6 +86,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     warmup_iterations = warmup_steps*step_size 
 
     scaler = GradScaler()
+    
 
     for batch_idx,(image, text, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
@@ -97,7 +141,13 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
         adv_loss = adv_loss1 + args.beta * adv_loss2
         
-        loss = adv_loss
+        umap_loss_pos1 = - umap(clean_image_emb, adv_image_emb)
+        umap_loss_pos2 = - umap(adv_image_emb, clean_text_emb)
+        umap_loss = umap_loss_pos1 + args.gamma * umap_loss_pos2
+
+        G_loss = args.alpha * adv_loss + args.delta * umap_loss
+        
+        loss = G_loss
 
         loss.backward()
         optimizer.step()  
@@ -207,7 +257,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--clip_model', default='RN101', type=str)
+    parser.add_argument('--clip_model', default='ViT-B/32', type=str)
     
     # noise limit
     parser.add_argument('--norm_type', default='l2', type=str, choices=['l2', 'linf'])
@@ -219,6 +269,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
     
     # hyperparameters
+    parser.add_argument('--alpha', default=10, type=float, help='weight for the adversarial loss')
     parser.add_argument('--beta', default=5, type=float, help='weight for the adversarial loss')
     
     args = parser.parse_args()
