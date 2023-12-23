@@ -1,7 +1,7 @@
 import argparse
 import torch
 import clip
-import os
+from torch.utils.data import DataLoader
 from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB
 import numpy as np
 from tqdm import tqdm
@@ -17,84 +17,7 @@ from utils.noise_utils import gen_perturbation
 from utils.record import record_result
 from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
 from utils.load_data import load_class_dataset
-from utils.evaluate import test_linear_probe
-
-@torch.no_grad()
-def accuracy(output, target, topk=(1,)):
-    pred = output.topk(max(topk), 1, True, True)[1].t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-    return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
-
-def test_linear_probe_noise(trainloader,testloader,device,model,delta_im, arg):
-    def get_features(dataloader,delta_im, attack=False):
-        all_features = []
-        all_labels = []
-        
-        with torch.no_grad():
-            for images, labels in tqdm(dataloader):
-                if attack:
-                    delta_im = delta_im.to(device)
-                    images = images.to(device)
-                    images = torch.clamp(images + delta_im, min=0, max=1)
-                    images = clip_normalize(images)
-                features = model.encode_image(images.to(device))
-
-                all_features.append(features)
-                all_labels.append(labels)
-
-        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
-
-    # Calculate the image features
-    train_features, train_labels = get_features(trainloader,delta_im, attack=False)
-    test_features, test_labels = get_features(testloader, delta_im,attack=True)
-
-    # Perform logistic regression
-    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
-    classifier.fit(train_features, train_labels)
-
-    # Evaluate using the logistic regression classifier
-    predictions = classifier.predict(test_features)
-    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
-    print(f"Accuracy = {accuracy:.3f}")
-    return accuracy
-
-def test_linear_probe_patch(trainloader,testloader,device,model,uap_noise, mask, arg):
-    def get_features(dataloader, attack=False):
-        all_features = []
-        all_labels = []
-        
-        with torch.no_grad():
-            for images, labels in tqdm(dataloader):
-                if attack:
-                    new_shape = images.shape
-                    f_x = torch.mul(mask.type(torch.FloatTensor),
-                                    uap_noise.type(torch.FloatTensor)) + torch.mul(
-                        1 - mask.expand(new_shape).type(torch.FloatTensor), images.type(torch.FloatTensor))
-
-                    f_x = f_x.to(device)  
-                    f_x = clip_normalize(f_x)      
-                    images = f_x
-                features = model.encode_image(images.to(device))
-
-                all_features.append(features)
-                all_labels.append(labels)
-
-        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
-
-    # Calculate the image features
-    train_features, train_labels = get_features(trainloader, attack=False)
-    test_features, test_labels = get_features(testloader, attack=True)
-
-    # Perform logistic regression
-    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
-    classifier.fit(train_features, train_labels)
-
-    # Evaluate using the logistic regression classifier
-    predictions = classifier.predict(test_features)
-    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
-    print(f"Accuracy = {accuracy:.3f}")
-    return accuracy
-
+from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot
 
 def main(args):
     device = args.device
@@ -115,23 +38,14 @@ def main(args):
     train_dataset, test_dataset = load_class_dataset(args.dataset, clip_transform)
     
     batch_size = args.batch_size
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
     class_names = test_dataset.classes
     zeroshot_weights = zeroshot_classifier(model, device, class_names, prompt_templates)
-    
-    if args.attack_type == "universal":
-        prompt = "An image"
-        prompt_tokens = clip.tokenize([prompt]).to(device)
-        prompt_embedding = model.encode_text(prompt_tokens)
-        delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)
-        torch.save(delta_im, "/remote-home/songtianwei/research/unlearn_multimodal/delta_im.pt")
-     
-    ################## linear probe #########################
-    print("linear probe")
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    if args.baseline == "my":
-        linear_probe_result = test_linear_probe_noise(train_loader, test_dataloader, device, model, delta_im, args)
+
+    if args.baseline == "clean":
+        process_fn = None
+        
     elif args.baseline == "advclip":
         uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_96.34_17.pt"
         uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
@@ -142,90 +56,77 @@ def main(args):
         mask, applied_patch, x, y = mask_generation(args, patch)
         applied_patch = torch.from_numpy(applied_patch)
         mask = torch.from_numpy(mask)
+        uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_95.94_20.pt"
+        uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
+        uap_noise = clamp_patch(args, uap_noise)
+        uap_noise.to(device)
+        
+        def process_fn(images):
+            new_shape = images.shape
+            f_x = torch.mul(mask.type(torch.FloatTensor),
+                            uap_noise.type(torch.FloatTensor)) + torch.mul(
+                1 - mask.expand(new_shape).type(torch.FloatTensor), images.type(torch.FloatTensor))
 
-        # add the uap
-        linear_probe_result = test_linear_probe_patch(train_loader, test_dataloader, device, model,uap_noise, mask, args)
+            f_x = f_x.to(device)  
+            f_x = clip_normalize(f_x)      
+            return f_x
+
+    elif args.baseline == "my":
+        if args.attack_type == "universal":
+            prompt = "An image"
+            prompt_tokens = clip.tokenize([prompt]).to(device)
+            prompt_embedding = model.encode_text(prompt_tokens)
+            delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)
+            torch.save(delta_im, "/remote-home/songtianwei/research/unlearn_multimodal/delta_im.pt")
+            def process_fn(images):
+                images_adv = torch.clamp(images + delta_im, min=0, max=1)
+                images_adv = clip_normalize(images_adv)
+                return images_adv
+        elif args.attack_type == "sample":
+            def process_fn(images, target):
+                target_index = target.detach().cpu().numpy()
+                text_of_classes = [class_names[i] for i in target_index]
+                # use the first prompt template
+                rand_index = np.random.randint(0, len(prompt_templates))
+                fix_index = True
+                if fix_index:   # fix the index of rand index to 0
+                    rand_index = 0
+                prompt_template = None
+                if prompt_template:
+                    text_of_target_class = [prompt_template.format(class_name) for class_name in text_of_classes]
+                else:
+                    text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
+                text_tokens = clip.tokenize(text_of_target_class).to(device)
+                text_embedding = model.encode_text(text_tokens)
+                delta_im = gen_perturbation(generator, text_embedding, images, args)
+                # add delta(noise) to image
+                images_adv = torch.clamp(images + delta_im, min=0, max=1)
+                images_adv = clip_normalize(images_adv)
+                image_features = model.encode_image(images_adv)
+                return image_features
+    
+    else:
+        raise NotImplementedError
+    
+    ################## linear probe #########################
+    print("Start linear probe")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    linear_probe_result = test_linear_probe(train_loader, test_dataloader, device, model, delta_im, args, process_fn=process_fn)
     print(f"Linear probe result: {linear_probe_result:.2f}")
     
     ################## zero shot ###########################
-    print("zero shot")
-    with torch.no_grad():
-        top1, top5, n = 0., 0., 0.
-        for i, (images, target) in enumerate(tqdm(test_dataloader)):
-            images = images.to(device)
-            target = target.to(device)
-            
-            if args.baseline == "clean":
-                images = clip_normalize(images)
-                image_features = model.encode_image(images)
-                
-            elif args.baseline == "advclip":
-                uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_96.34_17.pt"
-                uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
-                uap_noise = clamp_patch(args, uap_noise)
-                uap_noise.to(device)
-                
-                patch = patch_initialization(args)
-                mask, applied_patch, x, y = mask_generation(args, patch)
-                applied_patch = torch.from_numpy(applied_patch)
-                mask = torch.from_numpy(mask)
-
-                # add the uap
-                new_shape = images.shape
-                f_x = torch.mul(mask.type(torch.FloatTensor),
-                                uap_noise.type(torch.FloatTensor)) + torch.mul(
-                    1 - mask.expand(new_shape).type(torch.FloatTensor), images.type(torch.FloatTensor))
-
-                f_x = f_x.to(device)  
-                f_x = clip_normalize(f_x)      
-                image_features = model.encode_image(f_x)
-            elif args.baseline == "my":
-                if args.attack_type == "universal":
-                    images_adv = torch.clamp(images + delta_im, min=0, max=1)
-                    images_adv = clip_normalize(images_adv)
-                    image_features = model.encode_image(images_adv)
-                elif args.attack_type == "sample":
-                    target_index = target.detach().cpu().numpy()
-                    text_of_classes = [class_names[i] for i in target_index]
-                    # use the first prompt template
-                    rand_index = np.random.randint(0, len(prompt_templates))
-                    fix_index = True
-                    if fix_index:   # fix the index of rand index to 0
-                        rand_index = 0
-                    prompt_template = None
-                    if prompt_template:
-                        text_of_target_class = [prompt_template.format(class_name) for class_name in text_of_classes]
-                    else:
-                        text_of_target_class = [prompt_templates[rand_index].format(class_name) for class_name in text_of_classes]
-                    text_tokens = clip.tokenize(text_of_target_class).to(device)
-                    text_embedding = model.encode_text(text_tokens)
-                    delta_im = gen_perturbation(generator, text_embedding, images, args)
-                    # add delta(noise) to image
-                    images_adv = torch.clamp(images + delta_im, min=0, max=1)
-                    images_adv = clip_normalize(images_adv)
-                    image_features = model.encode_image(images_adv)
-                    
-            image_features /= image_features.norm(dim=-1, keepdim=True)
-            logits = 100. * image_features @ zeroshot_weights
-
-            # measure accuracy
-            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
-            top1 += acc1
-            top5 += acc5
-            n += images.size(0)
-
-    top1 = (top1 / n) * 100
-    top5 = (top5 / n) * 100 
-
-    print(f"Top-1 accuracy: {top1:.2f}")
-    print(f"Top-5 accuracy: {top5:.2f}")
+    print("Start zero shot")
+    top1, top5 = zero_shot(test_dataloader, model, zeroshot_weights, device, process_fn=process_fn)
+    print(f"Zero shot result: top1: {top1:.2f}, top5: {top5:.2f}")
     
     result = {
-        "top1": top1,
-        "top5": top5
+        "linear-probe": 
+            linear_probe_result,
+        "zero-shot":{
+            "top1": top1,
+            "top5": top5
+        }
     }
-    
-    
     
     return result
 
@@ -241,7 +142,7 @@ if __name__ == '__main__':
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
     
-    parser.add_argument('--baseline', default='my', choices=['my', 'advclip', 'clean'])
+    parser.add_argument('--baseline', default='advclip', choices=['my', 'advclip', 'clean'])
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 

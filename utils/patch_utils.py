@@ -2,6 +2,9 @@ import numpy as np
 import torch
 
 def patch_initialization(args, patch_type='rectangle'):
+    # if args has not noise_percentage, then use 0.1 as default
+    if not hasattr(args, 'noise_percentage'):
+        args.noise_percentage = 0.03
     noise_percentage = args.noise_percentage
     image_size = (3, 224, 224)
     if patch_type == 'rectangle':

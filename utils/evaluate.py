@@ -891,3 +891,135 @@ def test_linear_probe(trainloader,testloader,device,model,arg):
     accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
     print(f"Accuracy = {accuracy:.3f}")
     return accuracy
+
+def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
+    def get_features(dataloader):
+        all_features = []
+        all_labels = []
+        
+        with torch.no_grad():
+            for images, labels in tqdm(dataloader):
+                if process_fn:
+                    images = process_fn(images)
+                features = model.encode_image(images.to(device))
+                all_features.append(features)
+                all_labels.append(labels)
+
+        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
+
+    # Calculate the image features
+    train_features, train_labels = get_features(trainloader)
+    test_features, test_labels = get_features(testloader)
+
+    # Perform logistic regression
+    from sklearn.linear_model import LogisticRegression
+    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
+    classifier.fit(train_features, train_labels)
+
+    # Evaluate using the logistic regression classifier
+    predictions = classifier.predict(test_features)
+    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
+    print(f"Accuracy = {accuracy:.3f}")
+    return accuracy
+
+def test_linear_probe_noise(trainloader,testloader,device,model,delta_im, arg):
+    def get_features(dataloader,delta_im, attack=False):
+        all_features = []
+        all_labels = []
+        
+        with torch.no_grad():
+            for images, labels in tqdm(dataloader):
+                if attack:
+                    delta_im = delta_im.to(device)
+                    images = images.to(device)
+                    images = torch.clamp(images + delta_im, min=0, max=1)
+                    images = clip_normalize(images)
+                features = model.encode_image(images.to(device))
+
+                all_features.append(features)
+                all_labels.append(labels)
+
+        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
+
+    # Calculate the image features
+    train_features, train_labels = get_features(trainloader,delta_im, attack=False)
+    test_features, test_labels = get_features(testloader, delta_im,attack=True)
+
+    # Perform logistic regression
+    from sklearn.linear_model import LogisticRegression
+    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
+    classifier.fit(train_features, train_labels)
+
+    # Evaluate using the logistic regression classifier
+    predictions = classifier.predict(test_features)
+    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
+    print(f"Accuracy = {accuracy:.3f}")
+    return accuracy
+
+
+
+def test_linear_probe_patch(trainloader,testloader,device,model,uap_noise, mask, arg):
+    def get_features(dataloader, attack=False):
+        all_features = []
+        all_labels = []
+        
+        with torch.no_grad():
+            for images, labels in tqdm(dataloader):
+                if attack:
+                    new_shape = images.shape
+                    f_x = torch.mul(mask.type(torch.FloatTensor),
+                                    uap_noise.type(torch.FloatTensor)) + torch.mul(
+                        1 - mask.expand(new_shape).type(torch.FloatTensor), images.type(torch.FloatTensor))
+
+                    f_x = f_x.to(device)  
+                    f_x = clip_normalize(f_x)      
+                    images = f_x
+                features = model.encode_image(images.to(device))
+
+                all_features.append(features)
+                all_labels.append(labels)
+
+        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
+
+    # Calculate the image features
+    train_features, train_labels = get_features(trainloader, attack=False)
+    test_features, test_labels = get_features(testloader, attack=True)
+
+    # Perform logistic regression
+    from sklearn.linear_model import LogisticRegression
+    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
+    classifier.fit(train_features, train_labels)
+
+    # Evaluate using the logistic regression classifier
+    predictions = classifier.predict(test_features)
+    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
+    print(f"Accuracy = {accuracy:.3f}")
+    return accuracy
+
+def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
+    with torch.no_grad():
+        top1, top5, n = 0., 0., 0.
+        for i, (images, target) in enumerate(tqdm(test_dataloader)):
+            images = images.to(device)
+            target = target.to(device)
+            
+            if process_fn:
+                images_adv = process_fn(images)
+                image_features = model.encode_image(images_adv)
+                    
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            logits = 100. * image_features @ zeroshot_weights
+
+            # measure accuracy
+            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+            top1 += acc1
+            top5 += acc5
+            n += images.size(0)
+
+    top1 = (top1 / n) * 100
+    top5 = (top5 / n) * 100 
+
+    print(f"Top-1 accuracy: {top1:.2f}")
+    print(f"Top-5 accuracy: {top5:.2f}")
+    
+    return top1, top5
