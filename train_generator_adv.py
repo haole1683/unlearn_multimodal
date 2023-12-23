@@ -66,7 +66,7 @@ def umap(output_net, target_net, eps=0.0000001):
     return loss
 
 
-def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, config):
+def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, args):
     
     # generator train
     generator.train()
@@ -89,22 +89,26 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
     scaler = GradScaler()
     
-    # for batch_idx, (image, text, labels, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
-    for batch_idx,(image, text, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for batch_idx, (image, text, labels, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
         image = image.to(device,non_blocking=True)   
-        idx = idx.to(device,non_blocking=True)   
-        text = tokenizer(text, truncate=True).to(device)
+        # here the text are [batch,token_id] , so no need for tokenizer
+        # text = tokenizer(text, truncate=True).to(device)
+        text = text.to(device,non_blocking=True)
         
         need_denorm = True
         if need_denorm:
+            # Tip denormalize the image
             image = de_normalize(image)
-        
+        image = image.squeeze(1)
         # encode text to get text embedding
         text_generator_input = "An image"
         text_generator_input = [text_generator_input] * batch_size
         text_gen = tokenizer(text_generator_input, truncate=True).to(device)
-        text_embedding = model.module.encode_text(text_gen)
+        if args.distributed:
+            text_embedding = model.module.encode_text(text_gen)
+        else:
+            text_embedding = model.encode_text(text_gen)
         sec_emb = text_embedding
         
         # generate noise 
@@ -137,11 +141,14 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         # zero the parameter gradients
         optimizer.zero_grad()
         
-        
-        clean_image_emb = model.module.encode_image(image_norm.to(device))
-        clean_text_emb = model.module.encode_text(text.squeeze().to(device))
-        adv_image_emb = model.module.encode_image(image_adv_norm.to(device))
-        
+        if args.distributed:
+            the_model = model.module
+        else:
+            the_model = model
+        clean_image_emb = the_model.encode_image(image_norm.to(device))
+        clean_text_emb = the_model.encode_text(text.squeeze().to(device))
+        adv_image_emb = the_model.encode_image(image_adv_norm.to(device))
+            
         adv_loss_pos1 = criterion_contrastive(clean_image_emb, adv_image_emb).mean()
         adv_loss_pos2 = criterion_contrastive(adv_image_emb, clean_text_emb).mean()
         adv_loss1 = -adv_loss_pos1
@@ -160,17 +167,18 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         loss.backward()
         optimizer.step()  
         
-        with torch.no_grad():
-            logits_per_image, logits_per_caption= model(image_input, text)                  
-            ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
-            clip_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
+        # with torch.no_grad():
+        #     logits_per_image, logits_per_caption= model(image_input, text)                  
+        #     ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
+        #     clip_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
         # gather loss
         reduced_loss = loss.clone()
-        dist.reduce(reduced_loss, 0)  # average across GPUs
+        if args.distributed:
+            dist.reduce(reduced_loss, 0)  # average across GPUs
 
-        if dist.get_rank() == 0:  # print loss
-            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {adv_loss.item()}, clip_loss: {clip_loss.item()}')
+        if args.distributed and dist.get_rank() == 0:  # print loss
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {adv_loss.item()}')
         
         metric_logger.update(total_loss=reduced_loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -252,11 +260,11 @@ def main(args, config):
     import time 
     cur_time = time.strftime('%Y-%m-%d-%H:%M:%S',time.localtime(time.time()))
     max_epoch = config['schedular']['epochs']
-    generator_save_name = 'direct_generator_'+cur_time+'.pth'
+    generator_save_name = 'train_generator_in_adv'+cur_time+'.pth'
     for epoch in range(max_epoch):
         logging.info(f"Start training epoch {epoch+1}/{max_epoch}")
         
-        train_stats = train(generator, model, train_loader, optimizerG, tokenizer, epoch, warmup_steps=0, device=device, scheduler=schedulerG, config=config)
+        train_stats = train(generator, model, train_loader, optimizerG, tokenizer, epoch, warmup_steps=0, device=device, scheduler=schedulerG, args=args)
         
         save_obj = {
             'model': generator_without_ddp.state_dict(),
@@ -306,7 +314,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/test_univer_gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/cur_universal_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)

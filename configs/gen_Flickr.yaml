@@ -13,7 +13,7 @@ alpha: 0.4
 distill: True
 warm_up: True
 
-batch_size_train: 24  
+batch_size_train: 16  
 batch_size_test: 64
 image_res: 224
 max_words: 77

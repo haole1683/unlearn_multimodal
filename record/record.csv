@@ -1,30 +1,6 @@
-gen_dataset, gen_clip_model, gen_epoch, gen_clip_loss, checkpoint_path, dataset, model, attack_type, norm_type, epsilon, top1, top5, notes
-None, None, None, None, None, CIFAR10, ViT-B/16, clean, l2, 8, 90.8, 99.42999999999999
-flickr, ViT-B-16, 0, 1.3687, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_0.pth,CIFAR10, ViT-B/16, generator, l2, 8, 89.13, 99.48
-flickr, ViT-B-16, 5, 9.0712, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_5.pth,CIFAR10, ViT-B/16, generator, l2, 8, 63.68000000000001, 89.2
-flickr, ViT-B-16, 10, 10.9875, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_10.pth,CIFAR10, ViT-B/16, generator, l2, 8, 54.620000000000005, 81.46
-flickr, ViT-B-16, 15, 11.7325, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_15.pth,CIFAR10, ViT-B/16, generator, l2, 8, 52.0, 79.17
-flickr, ViT-B-16, 20, 12.3682, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_20.pth,CIFAR10, ViT-B/16, generator, l2, 8, 49.79, 78.3
-flickr, ViT-B-16, 25, 12.8582, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_25.pth,CIFAR10, ViT-B/16, generator, l2, 8, 47.24, 76.64
-flickr, ViT-B-16, 30, 13.0830, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_30.pth,CIFAR10, ViT-B/16, generator, l2, 8, 46.31, 74.41
-flickr, ViT-B-16, 35, 13.5600, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_35.pth,CIFAR10, ViT-B/16, generator, l2, 8, 46.089999999999996, 73.46000000000001
-flickr, ViT-B-16, 40, 13.7465, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_40.pth,CIFAR10, ViT-B/16, generator, l2, 8, 44.46, 71.86
-flickr, ViT-B-16, 45, 14.0978, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_45.pth,CIFAR10, ViT-B/16, generator, l2, 8, 43.33, 69.94
-flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 8, 44.0, 69.77
-None, None, None,None, None,CIFAR100, ViT-B/16, clean, l2, 8, 66.91, 89.27000000000001
-flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR100, ViT-B/16, generator, l2, 8, 20.44, 34.699999999999996
-None, None, None,None, None,ImageNet, ViT-B/16, clean, l2, 8, 62.336000000000006, 87.52600000000001
-flickr, ViT-B-16, 50, 14.3157, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,ImageNet, ViT-B/16, generator, l2, 8, 49.032, 75.016
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 8, 56.15, 82.95, universal
-None, None, None,None, None,CIFAR10, ViT-B/16, clean, l2, 8, 90.8, 99.42999999999999
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 16, 48.39, 77.85, universal
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,STL10, ViT-B/16, generator, l2, 8, 95.0375, 99.52499999999999
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,CIFAR10, ViT-B/16, generator, l2, 16, 45.660000000000004, 77.12
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,STL10, ViT-B/16, generator, l2, 8, 95.125, 99.5125
-None, None, None,None, None,STL10, ViT-B/16, clean, l2, 8, 98.075, 100.0
-flickr, ViT-B-16, 50,None, /remote-home/songtianwei/research/unlearn_multimodal/output/gen_flickr_ViT-B-16/checkpoint_epoch_50.pth,STL10, ViT-B/16, generator, l2, 8, 95.175, 99.575
-gen, flickr, 25,None, /remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth,CIFAR10, RN101, sample, l2, 8, 26.939999999999998, 67.78999999999999
-gen, flickr, 25,None, /remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth,STL10, RN101, sample, l2, 8, 78.125, 97.0625
-gen, flickr, 25,None, /remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth,CIFAR100, RN101, sample, l2, 8, 4.91, 11.07
-gen, flickr, 25,None, /remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth,CIFAR100, ViT-B/32, sample, l2, 8, 54.1, 80.67999999999999
-gen, flickr, 25,None, /remote-home/songtianwei/research/unlearn_multimodal/output/tt_gen_flickr_RN101/checkpoint_epoch_25.pth,CIFAR100, ViT-B/32, sample, l2, 8, 54.410000000000004, 80.74
+gen_dataset, gen_clip_model, gen_epoch, gen_clip_loss, checkpoint_path, dataset, model, baseline, attack_type, norm_type, epsilon, top1, top5
+universal, gen, 75,None, /remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth,CIFAR10, ViT-B/16, advclip, universal, l2, 8, 88.24, 98.58
+universal, gen, 75,None, /remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth,CIFAR10, ViT-B/16, my, universal, l2, 8, 14.62, 54.43
+universal, gen, 75,None, /remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth,CIFAR10, ViT-B/16, universal, l2, 8, 14.46, 54.410000000000004
+universal, gen, 75,None, /remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth,CIFAR10, ViT-B/16, universal, l2, 8, 88.24, 98.58
+universal, gen, 75,None, /remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth,CIFAR10, ViT-B/16, universal, l2, 8, 14.45, 54.37
