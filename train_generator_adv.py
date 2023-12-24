@@ -162,7 +162,11 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
         G_loss = args.alpha * adv_loss + args.delta * umap_loss
         
-        loss = G_loss
+        reverse_loss = True
+        if reversed:
+            loss = -G_loss
+        else:
+            loss = G_loss
 
         loss.backward()
         optimizer.step()  
@@ -314,7 +318,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/cur_universal_gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/min_universal_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)

@@ -893,7 +893,7 @@ def test_linear_probe(trainloader,testloader,device,model,arg):
     return accuracy
 
 def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
-    def get_features(dataloader):
+    def get_features(dataloader, process_fn=None):
         all_features = []
         all_labels = []
         
@@ -909,7 +909,7 @@ def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
 
     # Calculate the image features
     train_features, train_labels = get_features(trainloader)
-    test_features, test_labels = get_features(testloader)
+    test_features, test_labels = get_features(testloader, process_fn=process_fn)
 
     # Perform logistic regression
     from sklearn.linear_model import LogisticRegression
@@ -1019,7 +1019,7 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     top1 = (top1 / n) * 100
     top5 = (top5 / n) * 100 
 
-    print(f"Top-1 accuracy: {top1:.2f}")
-    print(f"Top-5 accuracy: {top5:.2f}")
+    print(f"Top-1 accuracy: {top1}")
+    print(f"Top-5 accuracy: {top5}")
     
     return top1, top5

@@ -2,14 +2,10 @@ import argparse
 import torch
 import clip
 from torch.utils.data import DataLoader
-from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB
 import numpy as np
-from tqdm import tqdm
-import ruamel.yaml as yaml
-import clip
 from pathlib import Path
 
-from sklearn.linear_model import LogisticRegression
+from torchvision.utils import save_image
 
 from models.model_gan_generator import NetG
 from utils.patch_utils import de_normalize, clamp_patch, mask_generation, patch_initialization
@@ -47,11 +43,6 @@ def main(args):
         process_fn = None
         
     elif args.baseline == "advclip":
-        uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_96.34_17.pt"
-        uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
-        uap_noise = clamp_patch(args, uap_noise)
-        uap_noise.to(device)
-        
         patch = patch_initialization(args)
         mask, applied_patch, x, y = mask_generation(args, patch)
         applied_patch = torch.from_numpy(applied_patch)
@@ -59,6 +50,7 @@ def main(args):
         uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_95.94_20.pt"
         uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
         uap_noise = clamp_patch(args, uap_noise)
+        uap_noise = de_normalize(uap_noise)
         uap_noise.to(device)
         
         def process_fn(images):
@@ -108,17 +100,18 @@ def main(args):
     else:
         raise NotImplementedError
     
-    ################## linear probe #########################
-    print("Start linear probe")
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    linear_probe_result = test_linear_probe(train_loader, test_dataloader, device, model, delta_im, args, process_fn=process_fn)
-    print(f"Linear probe result: {linear_probe_result:.2f}")
-    
     ################## zero shot ###########################
     print("Start zero shot")
     top1, top5 = zero_shot(test_dataloader, model, zeroshot_weights, device, process_fn=process_fn)
-    print(f"Zero shot result: top1: {top1:.2f}, top5: {top5:.2f}")
+    print(f"Zero shot result: top1: {top1}, top5: {top5}")
     
+    ################## linear probe #########################
+    print("Start linear probe")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    linear_probe_result = test_linear_probe(train_loader, test_dataloader, device, model, args, process_fn=process_fn)
+    print(f"Linear probe result: {linear_probe_result:.2f}")
+    
+    ################## record result ########################
     result = {
         "linear-probe": 
             linear_probe_result,
