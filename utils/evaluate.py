@@ -899,6 +899,8 @@ def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
         
         with torch.no_grad():
             for images, labels in tqdm(dataloader):
+                images = images.to(device)
+                labels = labels.to(device)
                 if process_fn:
                     images = process_fn(images)
                 features = model.encode_image(images.to(device))
@@ -908,8 +910,41 @@ def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
         return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
 
     # Calculate the image features
-    train_features, train_labels = get_features(trainloader)
-    test_features, test_labels = get_features(testloader, process_fn=process_fn)
+    train_features, train_labels = get_features(trainloader, process_fn=process_fn)
+    test_features, test_labels = get_features(testloader)
+
+    # Perform logistic regression
+    from sklearn.linear_model import LogisticRegression
+    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
+    classifier.fit(train_features, train_labels)
+
+    # Evaluate using the logistic regression classifier
+    predictions = classifier.predict(test_features)
+    accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
+    print(f"Accuracy = {accuracy:.3f}")
+    return accuracy
+
+
+def test_linear_probe_unlearn(trainloader,testloader,device,model,arg, process_fn=None):
+    def get_features(dataloader, process_fn=None):
+        all_features = []
+        all_labels = []
+        
+        with torch.no_grad():
+            for images, labels in tqdm(dataloader):
+                images = images.to(device)
+                labels = labels.to(device)
+                if process_fn:
+                    images = process_fn(images)
+                features = model.encode_image(images.to(device))
+                all_features.append(features)
+                all_labels.append(labels)
+
+        return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
+
+    # Calculate the image features
+    train_features, train_labels = get_features(trainloader, process_fn=process_fn)
+    test_features, test_labels = get_features(testloader)
 
     # Perform logistic regression
     from sklearn.linear_model import LogisticRegression
@@ -1006,6 +1041,8 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
             if process_fn:
                 images_adv = process_fn(images)
                 image_features = model.encode_image(images_adv)
+            else:
+                image_features = model.encode_image(images)
                     
             image_features /= image_features.norm(dim=-1, keepdim=True)
             logits = 100. * image_features @ zeroshot_weights

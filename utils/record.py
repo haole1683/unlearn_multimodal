@@ -17,8 +17,9 @@ def record_result(args, result):
     if not os.path.exists(csv_path):
         with open(csv_path, "w") as f:
             f.write("gen_dataset, gen_clip_model, gen_epoch, gen_clip_loss, checkpoint_path, dataset, model, attack_type, norm_type, epsilon, top1, top5\n")
-    top1 = result["top1"]
-    top5 = result["top5"]
+    zero_shot_result = result["zero-shot"]
+    top1 = zero_shot_result["top1"]
+    top5 = zero_shot_result["top5"]
     
     if args.attack_type != "clean":
         checkpoint_path = args.checkpoint

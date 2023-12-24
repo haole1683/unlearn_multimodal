@@ -13,7 +13,7 @@ from utils.noise_utils import gen_perturbation
 from utils.record import record_result
 from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
 from utils.load_data import load_class_dataset
-from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot
+from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn
 
 def main(args):
     device = args.device
@@ -69,6 +69,7 @@ def main(args):
             prompt_tokens = clip.tokenize([prompt]).to(device)
             prompt_embedding = model.encode_text(prompt_tokens)
             delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)
+            delta_im = delta_im.to(device)
             torch.save(delta_im, "/remote-home/songtianwei/research/unlearn_multimodal/delta_im.pt")
             def process_fn(images):
                 images_adv = torch.clamp(images + delta_im, min=0, max=1)
@@ -106,15 +107,21 @@ def main(args):
     print(f"Zero shot result: top1: {top1}, top5: {top5}")
     
     ################## linear probe #########################
-    print("Start linear probe")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    print("Start linear probe")
     linear_probe_result = test_linear_probe(train_loader, test_dataloader, device, model, args, process_fn=process_fn)
     print(f"Linear probe result: {linear_probe_result:.2f}")
     
+    ################# linear probe unlearn (attach attack in training set) #####################
+    print("Start linear probe unlearn")
+    linear_probe_result_unlearn = test_linear_probe_unlearn(train_loader, test_dataloader, device, model, args, process_fn=process_fn)
+    print(f"Linear probe result unlearn: {linear_probe_result_unlearn:.2f}")
     ################## record result ########################
     result = {
         "linear-probe": 
             linear_probe_result,
+        "linear-probe-unlearn":
+            linear_probe_result_unlearn,
         "zero-shot":{
             "top1": top1,
             "top5": top5
@@ -135,7 +142,7 @@ if __name__ == '__main__':
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
     
-    parser.add_argument('--baseline', default='advclip', choices=['my', 'advclip', 'clean'])
+    parser.add_argument('--baseline', default='clean', choices=['my', 'advclip', 'clean'])
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
