@@ -25,33 +25,33 @@ advCLIP:
 82.64
 
 # correct result
+
 ## clean
 ### zero-shot
-Top-1 accuracy: tensor([108.5625], device='cuda:0')                                                                                     
-Top-5 accuracy: tensor([145.1719], device='cuda:0')
-Zero shot result: top1: tensor([108.5625], device='cuda:0'), top5: tensor([145.1719], device='cuda:0')
+Top-1 accuracy: 69.24
+Top-5 accuracy: 92.46
 ### linear-probe
 87.42
 ### linear-probe-unlearn
 87.39
+
 ## advCLIP
 ### zero-shot
-Top-1 accuracy: tensor([1.5469], device='cuda:0')                                                                                       
-Top-5 accuracy: tensor([28.1875], device='cuda:0')                                                                                      
-Zero shot result: top1: tensor([1.5469], device='cuda:0'), top5: tensor([28.1875], device='cuda:0')  
+Top-1 accuracy: 0.9900000000000001
+Top-5 accuracy: 17.98
 ### linear-probe
-Accuary 0.31
+Accuary 0.280
 ### linear-probe-unlearn
-Accuary 8.63
+Accuary 8.65
+
 ## my
 ### zero-shot
-Top-1 accuracy: tensor([22.7188], device='cuda:0')                                                                                      
-Top-5 accuracy: tensor([85.2656], device='cuda:0')                                                                                      
-Zero shot result: top1: tensor([22.7188], device='cuda:0'), top5: tensor([85.2656], device='cuda:0')  
+Top-1 accuracy: 14.52
+Top-5 accuracy: 54.39000000000001
 ### linear-probe
-Accuary 11.48
+Accuary 11.04
 ### linear-probe-unlearn
-Accuracy = 39.920
+Accuracy = 39.39
 
 # idea
 - 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。

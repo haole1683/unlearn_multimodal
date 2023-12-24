@@ -910,8 +910,9 @@ def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
         return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
 
     # Calculate the image features
-    train_features, train_labels = get_features(trainloader, process_fn=process_fn)
-    test_features, test_labels = get_features(testloader)
+    train_features, train_labels = get_features(trainloader)
+    # poison when test
+    test_features, test_labels = get_features(testloader, process_fn=process_fn)
 
     # Perform logistic regression
     from sklearn.linear_model import LogisticRegression
@@ -943,6 +944,7 @@ def test_linear_probe_unlearn(trainloader,testloader,device,model,arg, process_f
         return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
 
     # Calculate the image features
+    # poison when train
     train_features, train_labels = get_features(trainloader, process_fn=process_fn)
     test_features, test_labels = get_features(testloader)
 
@@ -1031,6 +1033,12 @@ def test_linear_probe_patch(trainloader,testloader,device,model,uap_noise, mask,
     print(f"Accuracy = {accuracy:.3f}")
     return accuracy
 
+@torch.no_grad()
+def cal_accuracy(output, target, topk=(1,)):
+    pred = output.topk(max(topk), 1, True, True)[1].t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
+
 def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
@@ -1048,7 +1056,7 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
             logits = 100. * image_features @ zeroshot_weights
 
             # measure accuracy
-            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+            acc1, acc5 = cal_accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
             n += images.size(0)
