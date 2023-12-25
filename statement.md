@@ -24,7 +24,7 @@ my linear probe:
 advCLIP:
 82.64
 
-# correct result
+# correct result in CLIP ViT/16
 
 ## clean
 ### zero-shot
@@ -52,6 +52,25 @@ Top-5 accuracy: 54.39000000000001
 Accuary 11.04
 ### linear-probe-unlearn
 Accuracy = 39.39
+
+## my 200 epoch
+这里是max-loss
+### zero-shot
+Top-1 accuary: 9.21
+Top-5 accuary: 51.29
+### linear-probe
+Accuary 10.58
+### linear-probe-unlearn
+Accuary 27.80
+
+## my 200 epoch min loss
+### zero-shot
+Top-1 accuracy: 86.75
+Top-5 accuracy: 99.16
+### linear-probe
+Accuary 82.48
+### linear-probe-unlearn
+Accuary 64.95
 
 # idea
 - 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。

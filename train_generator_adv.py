@@ -162,8 +162,8 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
         G_loss = args.alpha * adv_loss + args.delta * umap_loss
         
-        reverse_loss = True
-        if reversed:
+        reverse_loss = False
+        if reverse_loss:
             loss = -G_loss
         else:
             loss = G_loss
@@ -216,7 +216,8 @@ def main(args, config):
     generator = NetG()
     generator = generator.to(device)
     
-    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
+    # update the optimizer lr from 0.0001 -> 0.001
+    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.001, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
     clip_model = args.clip_model
@@ -318,7 +319,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/min_universal_gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/max_universal_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)

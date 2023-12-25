@@ -147,7 +147,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         adv_loss1 = -adv_loss_pos1
         adv_loss2 = -adv_loss_pos2
         
-        reverse_loss = True
+        reverse_loss = False
         if reverse_loss:
             adv_loss1 = adv_loss1 * -1
             adv_loss2 = adv_loss2 * -1
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     clip_model_str = args.clip_model.replace('/', '-')
-    output_dir = "./output/test_univer_min_gen_{}_{}".format(config['dataset'], clip_model_str)
+    output_dir = "./output/max_gen_{}_{}".format(config['dataset'], clip_model_str)
     config.update({'output_dir': output_dir})
     
     Path(config["output_dir"]).mkdir(parents=True, exist_ok=True)

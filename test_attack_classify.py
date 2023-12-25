@@ -134,7 +134,7 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/cur_universal_gen_flickr_ViT-B-16/checkpoint_epoch_75.pth")   
+    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/min_universal_gen_flickr_ViT-B-16_2023-12-25/checkpoint_epoch_195.pth")   
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
