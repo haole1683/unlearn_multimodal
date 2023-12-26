@@ -143,11 +143,11 @@ if __name__ == '__main__':
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
     
-    parser.add_argument('--baseline', default='my', choices=['my', 'advclip', 'clean'])
+    parser.add_argument('--baseline', default='advclip', choices=['my', 'advclip', 'clean'])
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'STL10', 'CIFAR10',
+    parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'STL10', 'CIFAR10',
                                                                   'CIFAR100','GTSRB','ImageNet',
                                                                   'NUS-WIDE', 'Pascal', 'Wikipedis', 'XmediaNet'
                                                                   ])

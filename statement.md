@@ -24,7 +24,7 @@ my linear probe:
 advCLIP:
 82.64
 
-# correct result in CLIP ViT/16
+# correct result in CLIP ViT/16 in cifar-10
 
 ## clean
 ### zero-shot
@@ -72,5 +72,15 @@ Accuary 82.48
 ### linear-probe-unlearn
 Accuary 64.95
 
+
+# correct result in CLIP ViT/16 in cifar-100
+## advCLIP
+### zero-shot
+Top-1 accuracy: 0.22999999999999998
+Top-5 accuracy: 1.7500000000000002
+### linear-probe
+Accuary 0.14
+### linear-probe-unlearn
+Accuary 0.64
 # idea
 - 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。
