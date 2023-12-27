@@ -24,7 +24,7 @@ my linear probe:
 advCLIP:
 82.64
 
-# correct result in CLIP ViT/16 in cifar-10
+# result in CLIP ViT/16 in cifar-10
 
 ## clean
 ### zero-shot
@@ -73,7 +73,7 @@ Accuary 82.48
 Accuary 64.95
 
 
-# correct result in CLIP ViT/16 in cifar-100
+# result in CLIP ViT/16 in cifar-100
 ## advCLIP
 ### zero-shot
 Top-1 accuracy: 0.22999999999999998
@@ -82,5 +82,26 @@ Top-5 accuracy: 1.7500000000000002
 Accuary 0.14
 ### linear-probe-unlearn
 Accuary 0.64
+
+# result in CLIP ViT/32 in cifar-100 
+Note: 这里攻击的补丁以及noise都是在ViT/16上面训练得到的。
+现象：当在不同模型之间迁移的时候，攻击效果失效了
+
+## advCLIP
+Top-1 accuracy: 64.74
+Top-5 accuracy: 88.37
+### linear-probe
+63.30
+### linear-probe-unlearn
+35.920
+
+## my
+Top-1 accuracy: 61.12
+Top-5 accuracy: 86.26
+### linear-probe
+54.640
+### linear-probe-unlearn
+30.06
+
 # idea
 - 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。

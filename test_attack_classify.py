@@ -138,12 +138,12 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/16', type=str, choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
+    parser.add_argument('--clip_model', default='ViT-B/32', type=str, choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
     
-    parser.add_argument('--baseline', default='advclip', choices=['my', 'advclip', 'clean'])
+    parser.add_argument('--baseline', default='my', choices=['my', 'advclip', 'clean'])
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
