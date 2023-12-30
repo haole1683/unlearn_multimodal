@@ -104,4 +104,10 @@ Top-5 accuracy: 86.26
 30.06
 
 # idea
-- 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。
+- 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。 fail
+- 2.advCLIP迁移性不行，必须要指定CLIP对应的模型类型，要不然白搭。
+- 3.做防御？
+- 4.单模态文本对抗攻击。
+- 5.有目标攻击(文本指导的有目标攻击) Text-guide targeted attack，根据下游任务，可以指定文本输入内容，然后生成对应的patch或者noise，然后noise覆盖到所有图像。
+    - 有目标攻击，已经知道下游数据集的一个类别，以及使用的白盒的模型，然后生成对应的patch或者noise，然后noise覆盖到所有图像上，完成有目标攻击。
+- 6.优化损失函数，取代cos loss
