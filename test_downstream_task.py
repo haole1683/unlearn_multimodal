@@ -8,7 +8,7 @@ import argparse
 import numpy as np
 import torch.nn as nn
 from pathlib import Path
-from utils.load_data import load_dataset, load_dataloader
+from utils.data_utils import load_dataset, load_dataloader
 from utils.model import model, NonLinearClassifier
 from utils.patch_utils import patch_initialization, mask_generation
 from utils.evaluate import cross_evaluate, pat_cross_evaluate, solo_test, solo_adv_test, solo_fr_test, solo_adv_test_noise,solo_fr_noise_test

@@ -15,56 +15,15 @@ from torch.cuda.amp import autocast, GradScaler
 import torch.nn.functional as F
 import torch.distributed as dist
 
-# Dataset
-from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
-import utils.ori_utils as utils 
+from utils.ori_utils import MetricLogger, SmoothedValue
 from utils.nce import InfoNCE
-from utils.load_data import load_dataset
+from utils.data_utils import load_dataset, create_sampler, create_loader, get_dataset_class
 from utils.patch_utils import de_normalize
-
-def KL(P,Q,mask=None):
-    eps = 0.0000001
-    d = (P+eps).log()-(Q+eps).log()
-    d = P*d
-    if mask !=None:
-        d = d*mask
-    return torch.sum(d)
-def CE(P,Q,mask=None):
-    return KL(P,Q,mask)+KL(1-P,1-Q,mask)
-
-def umap(output_net, target_net, eps=0.0000001):
-    # Normalize each vector by its norm
-    (n, d) = output_net.shape
-    output_net_norm = torch.sqrt(torch.sum(output_net ** 2, dim=1, keepdim=True))
-    output_net = output_net / (output_net_norm + eps)
-    output_net[output_net != output_net] = 0
-    target_net_norm = torch.sqrt(torch.sum(target_net ** 2, dim=1, keepdim=True))
-    target_net = target_net / (target_net_norm + eps)
-    target_net[target_net != target_net] = 0
-    # Calculate the cosine similarity
-    model_similarity = torch.mm(output_net, output_net.transpose(0, 1))
-    model_distance = 1-model_similarity #[0,2]
-    model_distance[range(n), range(n)] = 3
-    model_distance = model_distance - torch.min(model_distance, dim=1)[0].view(-1, 1)
-    model_distance[range(n), range(n)] = 0
-    model_similarity = 1-model_distance
-    target_similarity = torch.mm(target_net, target_net.transpose(0, 1))
-    target_distance = 1-target_similarity
-    target_distance[range(n), range(n)] = 3
-    target_distance = target_distance - torch.min(target_distance,dim=1)[0].view(-1,1)
-    target_distance[range(n), range(n)] = 0
-    target_similarity = 1 - target_distance
-    # Scale cosine similarity to 0..1
-    model_similarity = (model_similarity + 1.0) / 2.0
-    target_similarity = (target_similarity + 1.0) / 2.0
-    # Transform them into probabilities
-    model_similarity = model_similarity / torch.sum(model_similarity, dim=1, keepdim=True)
-    target_similarity = target_similarity / torch.sum(target_similarity, dim=1, keepdim=True)
-    # Calculate the KL-divergence
-    loss = CE(target_similarity,model_similarity)
-    return loss
-
+from utils.distributed_utils import init_distributed_mode, is_main_process, setup_logging, get_rank, get_world_size
+from utils.clip_util import clip_normalize
+from utils.noise_utils import gen_perturbation
+# from utils.metrics import KL, CE, umap
 
 def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler, target_dataloader=None):
     
@@ -83,9 +42,9 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     loss_image = nn.CrossEntropyLoss()
     loss_text = nn.CrossEntropyLoss()
 
-    metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('total_loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
+    metric_logger = MetricLogger(delimiter="  ")
+    metric_logger.add_meter('lr', SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('total_loss', SmoothedValue(window_size=1, fmt='{value:.4f}'))
     header = 'Train Epoch: [{}]'.format(epoch)
     print_freq = 100
     step_size = 100
@@ -98,19 +57,18 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     else:
         the_model = model
 
-    guide_text = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    guide_text = get_dataset_class(args.attack_dataset)
     prompt = "An image of a {}" 
     guide_text_prompt = [prompt.format(class_name) for class_name in guide_text]
     guide_text_token = tokenizer(guide_text_prompt, truncate=True).to(device)
     
+    train_idx = 0
     for batch_idx, (image, text, labels, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
-        image = image.to(device,non_blocking=True)   
-        image = image.squeeze(1)      
-        
+        image = image.squeeze(1) .to(device,non_blocking=True)   
         text = text.squeeze().to(device, non_blocking=True)
         
-        text_adv_tokens = guide_text_token[batch_idx % len(guide_text_token)].unsqueeze(0).repeat(batch_size, 1)
+        text_adv_tokens = guide_text_token[train_idx % len(guide_text_token)].unsqueeze(0).repeat(batch_size, 1)
         # 用 advCLIP 导入数据集对应的text已经是token了，不需要再tokenizer
         
         image = de_normalize(image)
@@ -122,26 +80,14 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         # generate noise 
         batch_size = image.size(0)
         noise = torch.randn(batch_size, 100).to(device)
-        gen_image, _ = generator(noise, sec_emb)
-        delta_im = gen_image
         
-        # limit the perturbation to a range of [-epsilon, epsilon]
-        norm_type = args.norm_type
-        epsilon = args.epsilon
-        if norm_type == "l2":
-            temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
-            delta_im = delta_im * epsilon / temp
-        elif norm_type == "linf":
-            delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
-
-        delta_im = delta_im.to(image.device)
-        delta_im = F.interpolate(delta_im, (image.shape[-2], image.shape[-1]))
+        delta_im = gen_perturbation(generator, text_embedding, image, args)
         
         # add delta(noise) to image
         image_adv = torch.clamp(image + delta_im, min=0, max=1)
         # normalize the image_adv
-        image_norm = normalize_fn(image)
-        image_adv_norm = normalize_fn(image_adv)
+        image_norm = clip_normalize(image)
+        image_adv_norm = clip_normalize(image_adv)
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -177,12 +123,12 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         loss.backward()
         optimizer.step()  
         
+        train_idx += 1
+        
         # gather loss
         reduced_loss = loss.clone()
-
         if args.distributed:
             dist.reduce(reduced_loss, 0)  # average across GPUs
-
         if args.distributed and dist.get_rank() == 0:  # print loss
             print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         elif not args.distributed:
@@ -201,16 +147,16 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
 def main(args):
     if args.distributed:
-        utils.init_distributed_mode(args) 
+        init_distributed_mode(args) 
     
-    if utils.is_main_process():
+    if is_main_process():
         log_level = logging.INFO
-        utils.setup_logging(os.path.join(args.output_dir, "out.log"), log_level)  
+        setup_logging(os.path.join(args.output_dir, "out.log"), log_level)  
     
     device = torch.device(args.device)
     
     # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
+    seed = args.seed + get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -246,8 +192,8 @@ def main(args):
     train_dataset, test_dataset = dataset['train'], dataset['test']
     
     if args.distributed:
-        num_tasks = utils.get_world_size()
-        global_rank = utils.get_rank()            
+        num_tasks = get_world_size()
+        global_rank = get_rank()            
         samplers = create_sampler([train_dataset], [True], num_tasks, global_rank) + [None, None]
     else:
         samplers = [None, None, None]
@@ -271,7 +217,7 @@ def main(args):
             'epoch': epoch,
             'clip_loss': train_stats['total_loss'],
         }
-        if epoch % 20 ==0:  # save model every 5 epochs
+        if epoch % 5 ==0:  # save model every 5 epochs
             torch.save(save_obj, os.path.join(args.output_dir, f'checkpoint_epoch_{epoch}.pth'))  
 
 
@@ -287,6 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='nus-wide', type=str, choices=['Flickr', 'COCO',
                                                                             'nus-wide', 'pascal', 
                                                                             'wikipedia', 'xmedianet'])
+    parser.add_argument('--attack_dataset', default='CIFAR100', type=str, choices=['MNIST', 'CIFAR10', 'CIFAR100', 'ImageNet', 'STL10', 'GTSRB'])
     parser.add_argument('--batch_size', default=16, type=int)
     
     # noise limit
@@ -303,7 +250,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta', default=5, type=float, help='weight for the adversarial loss')
     parser.add_argument('--gamma', default=5, type=float, help='weight for the adversarial loss')
     parser.add_argument('--delta', type=int, default=1)
-    parser.add_argument('--max_epoch', default=200, type=int)
+    parser.add_argument('--max_epoch', default=20, type=int)
     
     # output
     # parser.add_argument('--output_dir', default='./output', type=str)
@@ -311,7 +258,7 @@ if __name__ == '__main__':
 
     clip_model_str = args.clip_model.replace('/', '-')
     
-    output_dir = "./output/text_targeted_gen_{}_{}".format(args.dataset, clip_model_str)
+    output_dir = "./output/text_targeted_gen_{}_{}_{}".format(args.dataset,args.attack_dataset,clip_model_str)
     args.output_dir = output_dir
     
     Path(output_dir).mkdir(parents=True, exist_ok=True)
