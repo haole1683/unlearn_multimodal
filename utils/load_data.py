@@ -2,7 +2,7 @@ import os
 import pickle
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB
-
+from torchvision.datasets import ImageFolder
 
 class CustomDataSet(Dataset):
     def __init__(
@@ -84,6 +84,9 @@ def load_dataset(name, bsz):
 
     return dataset
 
+def load_pair_dataset(name, bsz):
+    return load_dataset(name, bsz)
+
 def load_class_dataset(dataset_name, transform):
     # zero-shot test dataset
     if dataset_name == 'MNIST':
@@ -109,3 +112,33 @@ def load_class_dataset(dataset_name, transform):
         raise NotImplementedError
     
     return train_dataset, test_dataset
+
+def load_json_data(dataset_name):
+    import json
+    if dataset_name == "MNIST":
+        with open("data/MNIST/mnist.json", "r") as f:
+            data = json.load(f)
+    elif dataset_name == "CIFAR10":
+        with open("data/CIFAR10/cifar10.json", "r") as f:
+            data = json.load(f)
+    elif dataset_name == "CIFAR100":
+        with open("data/CIFAR100/cifar100.json", "r") as f:
+            data = json.load(f)
+    elif dataset_name == "ImageNet":
+        with open("data/ImageNet/imagenet.json", "r") as f:
+            data = json.load(f)
+    elif dataset_name == "STL10":
+        with open("data/STL10/stl10.json", "r") as f:
+            data = json.load(f)
+    elif dataset_name == "GTSRB":
+        with open("data/GTSRB/gtsrb.json", "r") as f:
+            data = json.load(f)
+    else:
+        raise NotImplementedError
+    return data
+
+def load_folder_data(folder_path):
+    from torchvision.datasets import ImageFolder
+    import torchvision.transforms as transforms
+    
+    return ImageFolder(root=folder_path, transform=transforms.ToTensor())
