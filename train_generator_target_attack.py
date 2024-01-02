@@ -74,7 +74,11 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     # train
     model.eval()  
     
+    # InfoNCE loss 
+    # This contrastive loss enforces the embeddings of similar (positive) samples to be close
+    # and those of different (negative) samples to be distant.
     criterion_contrastive = InfoNCE()
+    similarity_loss = nn.CosineSimilarity()
     
     loss_image = nn.CrossEntropyLoss()
     loss_text = nn.CrossEntropyLoss()
@@ -88,32 +92,31 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     warmup_iterations = warmup_steps*step_size 
 
     scaler = GradScaler()
+    
+    if args.distributed:
+        the_model = model.module
+    else:
+        the_model = model
 
     guide_text = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-    prompt = "An image of a {}"
+    prompt = "An image of a {}" 
     guide_text_prompt = [prompt.format(class_name) for class_name in guide_text]
     guide_text_token = tokenizer(guide_text_prompt, truncate=True).to(device)
     
     for batch_idx, (image, text, labels, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
         image = image.to(device,non_blocking=True)   
-        image = image.squeeze(1)
+        image = image.squeeze(1)      
         
         text = text.squeeze().to(device, non_blocking=True)
-        # idx = idx.to(device,non_blocking=True)   
-        # text = tokenizer(text, truncate=True).to(device)
         
+        text_adv_tokens = guide_text_token[batch_idx % len(guide_text_token)].unsqueeze(0).repeat(batch_size, 1)
         # 用 advCLIP 导入数据集对应的text已经是token了，不需要再tokenizer
         
-        need_denorm = True
-        if need_denorm:
-            image = de_normalize(image)
+        image = de_normalize(image)
         
         # encode text to get text embedding
-        if args.distributed:
-            text_embedding = model.module.encode_text(text)
-        else:
-            text_embedding = model.encode_text(text)
+        text_embedding = the_model.encode_text(text_adv_tokens)
         sec_emb = text_embedding
         
         # generate noise 
@@ -142,26 +145,26 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
 
         # zero the parameter gradients
         optimizer.zero_grad()
-        
-        if args.distributed:
-            the_model = model.module
-        else:
-            the_model = model
             
         image_clean_emb = the_model.encode_image(image_norm.to(device)) 
         image_adv_emb = the_model.encode_image(image_adv_norm.to(device))
         
         text_clean_emb = the_model.encode_text(text.to(device))
-        text_adv_emb = the_model.encode_text(guide_text_token.squeeze().to(device))
+        text_adv_emb = the_model.encode_text(text_adv_tokens.squeeze().to(device))
         
+        # image and guide text embedding are closer
         loss_advImg_advText = criterion_contrastive(image_adv_emb, text_adv_emb).mean()   # min the loss
-        # loss_text_advImg = criterion_contrastive(adv_image_emb, guide_text_emb).mean()  # max the loss
         
-        adv_loss1 = loss_advImg_advText
+        loss_advImg_advText_cosSim = similarity_loss(image_adv_emb, text_adv_emb).mean()
+        # image embedding with noise are closer
+        # image_adv_emb_flip = image_adv_emb.flip(0)
+        # loss_advImg_advImg = criterion_contrastive(image_adv_emb, image_adv_emb_flip).mean()  # min the loss
+        
+        adv_loss1 = -loss_advImg_advText_cosSim
         # adv_loss2 = loss_text_advImg
 
         adv_loss = args.alpha * adv_loss1 
-        # adv_loss = args.beta * adv_loss1 +  adv_loss2
+        # adv_loss = args.beta * adv_loss1 +  loss_advImg_advImg
         
         # umap_loss_pos1 = - umap(clean_image_emb, adv_image_emb)
         # umap_loss_pos2 = - umap(adv_image_emb, clean_text_emb)
@@ -171,9 +174,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         G_loss = adv_loss
         
         loss = G_loss
-
         loss.backward()
-        
         optimizer.step()  
         
         # gather loss
@@ -183,14 +184,15 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
             dist.reduce(reduced_loss, 0)  # average across GPUs
 
         if args.distributed and dist.get_rank() == 0:  # print loss
-            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {adv_loss.item()}')
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
+        elif not args.distributed:
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         
         metric_logger.update(total_loss=reduced_loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         if epoch==0 and batch_idx%step_size==0 and batch_idx<=warmup_iterations: 
             scheduler.step(batch_idx//step_size)  
-        
-               
+             
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     logging.info(f"Averaged stats: {metric_logger.global_avg()}")     
@@ -216,7 +218,6 @@ def main(args):
     
     generator = NetG()
     # init weights
-    nn.init.kaiming_normal_(generator.weight.data)
     generator = generator.to(device)
     
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
@@ -270,7 +271,7 @@ def main(args):
             'epoch': epoch,
             'clip_loss': train_stats['total_loss'],
         }
-        if epoch % 5 ==0:  # save model every 5 epochs
+        if epoch % 20 ==0:  # save model every 5 epochs
             torch.save(save_obj, os.path.join(args.output_dir, f'checkpoint_epoch_{epoch}.pth'))  
 
 

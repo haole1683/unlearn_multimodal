@@ -103,6 +103,25 @@ Top-5 accuracy: 86.26
 ### linear-probe-unlearn
 30.06
 
+# result in CLIP ViT/16 in cifar-10 My Targeted Attack
+## My Text-guide targeted attack
+Attackers' abilities : Add noise to the downstream test image, knowing the downstream classes 
+(eg: cifar10-10 classes names:['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
+
+Step 1:
+Train a generator to generate noise
+Step 2:
+Construct the attack prompt , "A image of {}".format("dog"), Attacker would like to mislead model to classify all image to "dog"
+Step 3:
+Test Attack performance.
+
+Here is the accuary rate after attack:
+### zero-shot
+Top-1 accuracy: 12.770000000000001
+Top-5 accuracy: 86.72999999999999
+### linear-probe
+Linear probe result: 16.97
+
 # idea
 - 1.将advCLIP的patch或者my noise attach到下游任务训练集上，在下游任务训练集上训练一下，看下效果。 fail
 - 2.advCLIP迁移性不行，必须要指定CLIP对应的模型类型，要不然白搭。

@@ -66,7 +66,7 @@ def main(args):
 
     elif args.baseline == "my":
         if args.attack_type == "universal":
-            prompt = "An image of a dog"
+            prompt = "An beautiful and wonderful image of a truck"
             prompt_tokens = clip.tokenize([prompt]).to(device)
             prompt_embedding = model.encode_text(prompt_tokens)
             delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)
@@ -135,11 +135,11 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/text_guide_target_gen_nus-wide_ViT-B-16/checkpoint_epoch_195.pth")   
+    parser.add_argument('--checkpoint', default="/remote-home/songtianwei/research/unlearn_multimodal/output/text_targeted_gen_nus-wide_ViT-B-16/checkpoint_epoch_20.pth")   
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)   
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--clip_model', default='ViT-B/16', type=str, choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
+    parser.add_argument('--clip_model', default='ViT-B/32', type=str, choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
