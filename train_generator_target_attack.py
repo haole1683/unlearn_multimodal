@@ -62,7 +62,6 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     guide_text_prompt = [prompt.format(class_name) for class_name in guide_text]
     guide_text_token = tokenizer(guide_text_prompt, truncate=True).to(device)
     
-    train_idx = 0
     for batch_idx, (image, text, labels, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         batch_size = len(image)
         image = image.squeeze(1) .to(device,non_blocking=True)   
@@ -130,9 +129,9 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         if args.distributed:
             dist.reduce(reduced_loss, 0)  # average across GPUs
         if args.distributed and dist.get_rank() == 0:  # print loss
-            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
+            print(f'Train_idx {train_idx}, Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         elif not args.distributed:
-            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
+            print(f'Train_idx {train_idx}, Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         
         metric_logger.update(total_loss=reduced_loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
