@@ -36,7 +36,8 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
     # InfoNCE loss 
     # This contrastive loss enforces the embeddings of similar (positive) samples to be close
     # and those of different (negative) samples to be distant.
-    criterion_contrastive = InfoNCE()
+    infoNCE_loss = InfoNCE(reduction='mean',negative_mode='unpaired')
+    # COS similarity
     similarity_loss = nn.CosineSimilarity()
     
     loss_image = nn.CrossEntropyLoss()
@@ -67,7 +68,10 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         image = image.squeeze(1) .to(device,non_blocking=True)   
         text = text.squeeze().to(device, non_blocking=True)
         
-        text_adv_tokens = guide_text_token[train_idx % len(guide_text_token)].unsqueeze(0).repeat(batch_size, 1)
+        text_adv_tokens = guide_text_token[batch_idx % len(guide_text_token)].unsqueeze(0).repeat(batch_size, 1)
+
+        # remove the target class from the guide text
+        other_text_tokens = guide_text_token[torch.arange(len(guide_text_token))!=(batch_idx % len(guide_text_token))]
         # 用 advCLIP 导入数据集对应的text已经是token了，不需要再tokenizer
         
         image = de_normalize(image)
@@ -97,15 +101,18 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         text_clean_emb = the_model.encode_text(text.to(device))
         text_adv_emb = the_model.encode_text(text_adv_tokens.squeeze().to(device))
         
-        # image and guide text embedding are closer
-        loss_advImg_advText = criterion_contrastive(image_adv_emb, text_adv_emb).mean()   # min the loss
+        text_other_neg_emb = the_model.encode_text(other_text_tokens.squeeze().to(device))
         
-        loss_advImg_advText_cosSim = similarity_loss(image_adv_emb, text_adv_emb).mean()
+        # image and guide text embedding are closer
+        # loss_advImg_advText = infoNCE_loss(image_adv_emb, text_adv_emb).mean()   # min the infoNCE loss
+        loss_advImg_advText_otherText = infoNCE_loss(image_adv_emb, text_adv_emb, text_other_neg_emb).mean()   # min the infoNCE loss
+        # loss_advImg_advText_cosSim = similarity_loss(image_adv_emb, text_adv_emb).mean()
+        
         # image embedding with noise are closer
         # image_adv_emb_flip = image_adv_emb.flip(0)
         # loss_advImg_advImg = criterion_contrastive(image_adv_emb, image_adv_emb_flip).mean()  # min the loss
         
-        adv_loss1 = -loss_advImg_advText_cosSim
+        adv_loss1 = loss_advImg_advText_otherText
         # adv_loss2 = loss_text_advImg
 
         adv_loss = args.alpha * adv_loss1 
@@ -122,16 +129,14 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         loss.backward()
         optimizer.step()  
         
-        train_idx += 1
-        
         # gather loss
         reduced_loss = loss.clone()
         if args.distributed:
             dist.reduce(reduced_loss, 0)  # average across GPUs
         if args.distributed and dist.get_rank() == 0:  # print loss
-            print(f'Train_idx {train_idx}, Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         elif not args.distributed:
-            print(f'Train_idx {train_idx}, Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
+            print(f'Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item()}')
         
         metric_logger.update(total_loss=reduced_loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -257,7 +262,7 @@ if __name__ == '__main__':
 
     clip_model_str = args.clip_model.replace('/', '-')
     
-    output_dir = "./output/text_targeted_gen_{}_{}_{}".format(args.dataset,args.attack_dataset,clip_model_str)
+    output_dir = "./output/text_targeted_info_gen_{}_{}_{}".format(args.dataset,args.attack_dataset,clip_model_str)
     args.output_dir = output_dir
     
     Path(output_dir).mkdir(parents=True, exist_ok=True)
