@@ -1039,9 +1039,17 @@ def cal_accuracy(output, target, topk=(1,)):
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
+def cal_target_attack_acc(output, target, attack_target):
+    pred = output.topk(1, 1, True, True)[1].t()
+    if len(attack_target.shape) == 0:
+        attack_target = torch.fill_(torch.empty_like(target), attack_target)
+    correct = pred.eq(attack_target.view(1, -1).expand_as(pred))
+    return float(correct[:1].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
+
 def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
+        tgt_top1 = 0.
         for i, (images, target) in enumerate(tqdm(test_dataloader)):
             images = images.to(device)
             target = target.to(device)
@@ -1055,16 +1063,25 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
             image_features /= image_features.norm(dim=-1, keepdim=True)
             logits = 100. * image_features @ zeroshot_weights
 
-            # measure accuracy
+            # measure misclassification accuracy
             acc1, acc5 = cal_accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
+            
+            # measure target attack accuary
+            tgt_attack_tgt = torch.tensor(2).to(device)
+            tgt_atk_acc1 = cal_target_attack_acc(logits, target, tgt_attack_tgt)
+            tgt_top1 += tgt_atk_acc1
+            
             n += images.size(0)
 
     top1 = (top1 / n) * 100
     top5 = (top5 / n) * 100 
+    
+    tgt_top1 = (tgt_top1 / n) * 100
 
     print(f"Top-1 accuracy: {top1}")
     print(f"Top-5 accuracy: {top5}")
+    print(f"Target attack accuracy: {tgt_top1}")
     
     return top1, top5

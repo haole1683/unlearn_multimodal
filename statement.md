@@ -136,3 +136,15 @@ Linear probe result: 16.97
 # Phenomenon
 目前的方法都无法做到迁移性，CLIP的encoder有多个版本，但是针对一个模型的攻击（ViT-B16）无法迁移到
 其他的模型（ViT-B32），一迁移攻击效果为0。
+
+
+
+# TODO
+1.CLIP pretrained freeze单独训练一个类别，3000张cat，max loss on the dataset, 1 epoch with small lr 1e-3。batch: 5 , negative : other category image.    Select dataset from image-text pair dataset ,or construct the hand-craft prompt.
+2.Train generator to minimize the loss of the dataset.
+3.Shuffle the dataset
+4.repeat 1 - 2 for serveral times.
+
+5.Evaluation: 
+    - cifar-10, noise add to the cat category, then train a supervised model on the dataset, then test the model on the clean test set. Sample-wise noise with random input or different prompt.
+    - cifar-10, linear probe.

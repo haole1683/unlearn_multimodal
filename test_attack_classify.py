@@ -48,7 +48,7 @@ def main(args):
         mask, applied_patch, x, y = mask_generation(args, patch)
         applied_patch = torch.from_numpy(applied_patch)
         mask = torch.from_numpy(mask)
-        uap_noise_path = "/remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/pascal/0.03/myuap_gan_99.24_20.pt"
+        uap_noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/text_targeted_gen_nus-wide_CIFAR10_ViT-B-16/checkpoint_epoch_20.pth"
         uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
         uap_noise = clamp_patch(args, uap_noise)
         uap_noise = de_normalize(uap_noise)
@@ -66,7 +66,7 @@ def main(args):
 
     elif args.baseline == "my":
         if args.attack_type == "universal":
-            prompt = "An image of an worm"
+            prompt = "An image of an bird"
             prompt_tokens = clip.tokenize([prompt]).to(device)
             prompt_embedding = model.encode_text(prompt_tokens)
             delta_im = gen_perturbation(generator, prompt_embedding, torch.zeros((1, 3, 224, 224)).to(device), args)

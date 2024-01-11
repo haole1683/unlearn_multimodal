@@ -105,6 +105,8 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         
         # image and guide text embedding are closer
         # loss_advImg_advText = infoNCE_loss(image_adv_emb, text_adv_emb).mean()   # min the infoNCE loss
+        
+        loss_advImg_advText = infoNCE_loss(image_adv_emb, text_adv_emb).mean()   # min the infoNCE loss
         loss_advImg_advText_otherText = infoNCE_loss(image_adv_emb, text_adv_emb, text_other_neg_emb).mean()   # min the infoNCE loss
         # loss_advImg_advText_cosSim = similarity_loss(image_adv_emb, text_adv_emb).mean()
         
@@ -112,7 +114,7 @@ def train(generator, model, data_loader, optimizer, tokenizer, epoch, warmup_ste
         # image_adv_emb_flip = image_adv_emb.flip(0)
         # loss_advImg_advImg = criterion_contrastive(image_adv_emb, image_adv_emb_flip).mean()  # min the loss
         
-        adv_loss1 = loss_advImg_advText_otherText
+        adv_loss1 = 10 * loss_advImg_advText + loss_advImg_advText_otherText
         # adv_loss2 = loss_text_advImg
 
         adv_loss = args.alpha * adv_loss1 
@@ -254,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta', default=5, type=float, help='weight for the adversarial loss')
     parser.add_argument('--gamma', default=5, type=float, help='weight for the adversarial loss')
     parser.add_argument('--delta', type=int, default=1)
-    parser.add_argument('--max_epoch', default=20, type=int)
+    parser.add_argument('--max_epoch', default=21, type=int)
     
     # output
     # parser.add_argument('--output_dir', default='./output', type=str)
