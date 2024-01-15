@@ -19,3 +19,4 @@ universal, gen, 195,None, /remote-home/songtianwei/research/unlearn_multimodal/o
 universal, gen, 195,None, /remote-home/songtianwei/research/unlearn_multimodal/output/min_universal_gen_flickr_ViT-B-16_2023-12-25/checkpoint_epoch_195.pth,CIFAR100, ViT-B/32, universal, l2, 8, 61.12, 86.26
 universal, gen, 195,None, /remote-home/songtianwei/research/unlearn_multimodal/output/max_universal_gen_flickr_ViT-B-16/checkpoint_epoch_195.pth,CIFAR10, ViT-B/16, universal, l2, 8, 9.229999999999999, 51.190000000000005
 universal, gen, 195,None, /remote-home/songtianwei/research/unlearn_multimodal/output/max_universal_gen_flickr_ViT-B-16/checkpoint_epoch_195.pth,CIFAR10, ViT-B/16, universal, l2, 8, 2.8000000000000003, 18.77
+targeted, gen, 15,None, /remote-home/songtianwei/research/unlearn_multimodal/output/text_targeted_gen_nus-wide_CIFAR100_ViT-B-16/checkpoint_epoch_15.pth,CIFAR10, ViT-B/16, universal, l2, 8, 19.23, 63.39

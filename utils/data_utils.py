@@ -4,7 +4,10 @@ import pickle
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB
-from torchvision.datasets import ImageFolder
+
+import numpy as np
+import json
+from PIL import Image
 
 class CustomDataSet(Dataset):
     def __init__(
@@ -115,6 +118,55 @@ def load_class_dataset(dataset_name, transform):
     
     return train_dataset, test_dataset
 
+def load_poison_dataset(dataset_name, noise, transform):
+    """load cifar-10 noise to its training dataset, specific class
+
+    Args:
+        dataset_name (str): name (cifar10)
+        noise_path (Tensor): noise([5000,3,32,32])
+        transform (Transforms): transform
+    """
+    if dataset_name == 'cifar10':
+        unlearnable_train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
+        test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+        
+        target_poison_class_name = "cat"
+        target_label = unlearnable_train_dataset.class_to_idx[target_poison_class_name]
+
+        perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
+        noise_idx = 0
+        for i in range(len(unlearnable_train_dataset)):
+            label = unlearnable_train_dataset.targets[i]
+            if label == target_label:  # poison the specific class 'cat'
+                unlearnable_train_dataset.data[i] += perturb_noise[noise_idx]
+                unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
+                noise_idx += 1
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
+
+        if noise_idx != noise.shape[0]:
+            raise ValueError("The number of noise is not equal to the number of target class.")
+
+        return unlearnable_train_dataset, test_dataset
+
+class jsonDataset(Dataset):
+    def __init__(self,json_path,text_transform=None, img_transform=None):
+        self.json_data = json.load(open(json_path,'r'))
+        self.text_transform = text_transform
+        self.img_transform = img_transform
+    def __getitem__(self,idx):
+        sample = self.json_data[idx]
+        text, img_path = sample['caption'], sample['image_path']
+        img = Image.open(img_path)
+        img = img.convert('RGB')
+        if self.text_transform:
+            text = self.text_transform(text)
+        if self.img_transform:
+            img = self.img_transform(img)
+        return text, img
+    def __len__(self):
+        return len(self.json_data)
+
 def load_json_data(dataset_name):
     import json
     if dataset_name == "MNIST":
@@ -153,8 +205,7 @@ def get_dataset_class(dataset_name):
     """
     train_dataset = load_class_dataset(dataset_name, None)[0]
     return train_dataset.classes
-    
-    
+
 
 
 def create_sampler(datasets, shuffles, num_tasks, global_rank):
@@ -186,3 +237,13 @@ def create_loader(datasets, samplers, batch_size, num_workers, is_trains, collat
         )              
         loaders.append(loader)
     return loaders    
+
+
+def create_my_loader(trainDataset, testDataset):
+    clean_train_loader = DataLoader(dataset=trainDataset, batch_size=128,
+                                shuffle=False, pin_memory=True,
+                                drop_last=False, num_workers=12)
+    clean_test_loader = DataLoader(dataset=testDataset, batch_size=128,
+                                    shuffle=False, pin_memory=True,
+                                    drop_last=False, num_workers=12)
+    return clean_train_loader, clean_test_loader

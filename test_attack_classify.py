@@ -19,8 +19,11 @@ def main(args):
     device = args.device
     
     # load clip model
-    model, preprocess = clip.load(args.clip_model, device)
+    model, preprocess = clip.load('RN50', device)
     # make sure to convert the model parameters to fp32
+    my_clip_pretrain_path = "/remote-home/songtianwei/research/unlearn_multimodal/output_ori/cifar10-Pretrain-2/checkpoint_epoch_65.pth"
+    checkpoint = torch.load(my_clip_pretrain_path, map_location=device)
+    model.load_state_dict(checkpoint['model'])
     model = model.float()
     model = model.to(device) 
     
@@ -41,14 +44,14 @@ def main(args):
     zeroshot_weights = zeroshot_classifier(model, device, class_names, prompt_templates)
 
     if args.baseline == "clean":
-        process_fn = None
+        process_fn = clip_normalize
         
     elif args.baseline == "advclip":
         patch = patch_initialization(args)
         mask, applied_patch, x, y = mask_generation(args, patch)
         applied_patch = torch.from_numpy(applied_patch)
         mask = torch.from_numpy(mask)
-        uap_noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/text_targeted_gen_nus-wide_CIFAR10_ViT-B-16/checkpoint_epoch_20.pth"
+        uap_noise_path = "//remote-home/songtianwei/research/advCLIP/AdvCLIP/output/uap/gan_patch/ViT-B16/nus-wide/0.03/uap_gan_95.73_10.pt"
         uap_noise = torch.load(uap_noise_path, map_location=device) # [3,224,224]
         uap_noise = clamp_patch(args, uap_noise)
         uap_noise = de_normalize(uap_noise)
@@ -144,11 +147,11 @@ if __name__ == '__main__':
     # use universarial attack
     parser.add_argument("--attack_type", default="universal", choices=["universal", "sample"])
     
-    parser.add_argument('--baseline', default='my', choices=['my', 'advclip', 'clean'])
+    parser.add_argument('--baseline', default='clean', choices=['my', 'advclip', 'clean'])
     parser.add_argument('--norm_type', default='l2', choices=['l2', 'linf'])
     parser.add_argument('--epsilon', default=8, type=int)
     # dataset 
-    parser.add_argument('--dataset', default='CIFAR100', choices=['MNIST', 'STL10', 'CIFAR10',
+    parser.add_argument('--dataset', default='CIFAR10', choices=['MNIST', 'STL10', 'CIFAR10',
                                                                   'CIFAR100','GTSRB','ImageNet',
                                                                   'NUS-WIDE', 'Pascal', 'Wikipedis', 'XmediaNet'
                                                                   ])

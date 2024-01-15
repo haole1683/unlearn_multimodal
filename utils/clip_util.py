@@ -67,3 +67,18 @@ def zeroshot_classifier(clip_model, device, classnames, templates):
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).to(device)
     return zeroshot_weights
 
+def get_embedding(clip_model, device, text):
+    with torch.no_grad():
+        text = clip.tokenize(text).to(device) #tokenize
+        text_embedding = clip_model.encode_text(text) #embed with text encoder
+        text_embedding /= text_embedding.norm(dim=-1, keepdim=True)
+        text_embedding = text_embedding.mean(dim=0)
+        text_embedding /= text_embedding.norm()
+    return text_embedding
+
+
+def get_clip_model(clip_version, device):
+    model, _ = clip.load(clip_version, device, jit=False)
+    model = model.float()
+    model = model.to(device)
+    return model
