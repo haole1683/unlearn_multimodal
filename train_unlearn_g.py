@@ -104,6 +104,7 @@ for epoch_idx in range(epoch):
     for batch in loop:
         text = tokenizer(batch[0], truncate=True).to(device)
         imgs = batch[1].to(device)
+        index = batch[2]
         batch_size = imgs.shape[0]
         
         noise = torch.randn(batch_size, 100).to(device)

@@ -15,15 +15,25 @@ from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normaliz
 from utils.data_utils import load_class_dataset
 from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn
 
+def test_zero_short(model, clip_version=None):
+    device = "cuda:0"
+    if isinstance(model, str):
+        model, preprocess = clip.load(model, device)
+
+    
 def main(args):
     device = args.device
     
     # load clip model
-    model, preprocess = clip.load('RN50', device)
+    model, preprocess = clip.load(args.clip_model, device)
     # make sure to convert the model parameters to fp32
-    my_clip_pretrain_path = "/remote-home/songtianwei/research/unlearn_multimodal/output_ori/cifar10-Pretrain-2/checkpoint_epoch_65.pth"
+    my_clip_pretrain_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip/model_ViT-B_16_poison_epoch9.pth"
     checkpoint = torch.load(my_clip_pretrain_path, map_location=device)
-    model.load_state_dict(checkpoint['model'])
+    print(f"Load clip model from {my_clip_pretrain_path}")
+    if "model" in checkpoint:
+        model.load_state_dict(checkpoint['model'])
+    else:
+        model.load_state_dict(checkpoint)
     model = model.float()
     model = model.to(device) 
     
