@@ -31,7 +31,11 @@ from utils.data_utils import (
 from utils.clip_util import (
     clip_normalize
 )
+from test_attack_classify import test_zero_shot
 
+def evalutate(model):
+    test_cifar_10_result = test_zero_shot(model)
+    return test_cifar_10_result
 
 def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
@@ -137,7 +141,8 @@ def main(args):
     
     #### Dataset #### 
     poisoned = False
-    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
+    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
+    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
     noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori.pt"
     if not poisoned:
         train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans)
@@ -153,12 +158,13 @@ def main(args):
     logging.info("Start training")
     start_time = time.time()    
     for epoch in range(start_epoch, max_epoch):
-        if not args.evaluate:
-            if args.distributed:
-                train_loader.sampler.set_epoch(epoch)
-            train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
+        if args.distributed:
+            train_loader.sampler.set_epoch(epoch)
+        result = evalutate(model)
+        print(result)
+        train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
             
-        # evalutate()
+        
         if distributed_utils.is_main_process():  
             # save the model to local
             tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip"
@@ -167,9 +173,6 @@ def main(args):
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch{epoch}.pth"))
             else:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch{epoch}.pth"))        
-            
-        if args.evaluate: 
-            break
            
         lr_scheduler.step(epoch+warmup_steps+1)  
         if args.distributed:
@@ -208,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default='output/clip_poison_pascal_sheep2aeroplane_1.00/')
     args = parser.parse_args()
 
-    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip"
+    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip"
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     main(args)

@@ -15,11 +15,42 @@ from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normaliz
 from utils.data_utils import load_class_dataset
 from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn
 
-def test_zero_short(model, clip_version=None):
+def test_zero_shot(model, clip_version=None):
     device = "cuda:0"
     if isinstance(model, str):
         model, preprocess = clip.load(model, device)
+    model.eval()
+    # load dataset
+    dataset_name = "CIFAR10"
+    train_dataset, test_dataset = load_class_dataset(dataset_name, clip_transform)
+    batch_size = 64
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    
+    class_names = test_dataset.classes
+    zeroshot_weights = zeroshot_classifier(model, device, class_names, prompt_templates)
 
+    process_fn = clip_normalize
+    
+    ################## zero shot ###########################
+    print("Start zero shot")
+    top1, top5 = zero_shot(test_dataloader, model, zeroshot_weights, device, process_fn=process_fn)
+    print(f"Zero shot result: top1: {top1}, top5: {top5}")
+    
+    ################## linear probe #########################
+    # train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    # print("Start linear probe")
+    # linear_probe_result = test_linear_probe(train_loader, test_dataloader, device, model, args, process_fn=process_fn)
+    # print(f"Linear probe result: {linear_probe_result:.2f}")
+    
+    result = {
+        # "linear-probe": 
+        #     linear_probe_result,
+        "zero-shot":{
+            "top1": top1,
+            "top5": top5
+        }
+    }
+    return result
     
 def main(args):
     device = args.device
