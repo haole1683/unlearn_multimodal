@@ -48,7 +48,7 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
     metric_logger.add_meter('lr', ori_utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('total_loss', ori_utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
     header = 'Train Epoch: [{}]'.format(epoch)
-    print_freq = 100
+    print_freq = 1
     step_size = 100
     warmup_iterations = warmup_steps*step_size 
 
@@ -87,12 +87,13 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
 
 
 
-def main(args):
+def main(args=None):
+    
     if args.distributed:
         distributed_utils.init_distributed_mode(args)   
 
     if distributed_utils.is_main_process():
-        log_level = logging.DEBUG if args.debug else logging.INFO
+        log_level = logging.INFO
         distributed_utils.setup_logging(os.path.join(args.output_dir, "out.log"), log_level)
 
     device = torch.device(args.device)
@@ -136,7 +137,7 @@ def main(args):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-6, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     #### Dataset #### 
@@ -153,7 +154,6 @@ def main(args):
     
     max_epoch = 10
     warmup_steps = 10
-    best_epoch = start_epoch
 
     logging.info("Start training")
     start_time = time.time()    
@@ -186,6 +186,26 @@ def main(args):
     if distributed_utils.is_main_process():   
         pass           
 
+def run_default_experiment():
+    parser = argparse.ArgumentParser()     
+    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    parser.add_argument('--distributed', action="store_true")
+
+    # poisoning
+    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip")
+    parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
+
+    # config overload
+    parser.add_argument('--output_dir', default='output/clip_poison_pascal_sheep2aeroplane_1.00/')
+    args = parser.parse_args()
+
+    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip"
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+
+    main(args)
             
 if __name__ == '__main__':
 
@@ -203,7 +223,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
 
     # poisoning
-    parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip")
+    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip")
     parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # config overload

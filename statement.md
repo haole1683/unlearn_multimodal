@@ -137,7 +137,8 @@ Linear probe result: 16.97
 # Phenomenon
 目前的方法都无法做到迁移性，CLIP的encoder有多个版本，但是针对一个模型的攻击（ViT-B16）无法迁移到
 其他的模型（ViT-B32），一迁移攻击效果为0。
-
+IDE当中代码使用了parser.parse_args()，当在jupyter下调用时出错。
+reference :https://blog.csdn.net/wmq104/article/details/123534597
 
 
 # TODO

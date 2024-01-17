@@ -275,7 +275,7 @@ def create_my_loader(trainDataset, testDataset):
 
 def create_simple_loader(dataset):
     loader = DataLoader(dataset, batch_size=128,
-                                shuffle=False, pin_memory=True,
+                                shuffle=True, pin_memory=True,
                                 drop_last=False, num_workers=12)
     return loader
 

@@ -13,13 +13,13 @@ BatchNorm = SynchronizedBatchNorm2d
 
 class affine(nn.Module):
 
-    def __init__(self, num_features):
+    def __init__(self, num_features, sec_emb_len=512):
         super(affine, self).__init__()
 
         self.batch_norm2d = BatchNorm(num_features, affine=False)
 
         # my Code: ===========
-        self.sec_emd_len = 512  # ori 256
+        self.sec_emd_len = sec_emb_len  # ori 256
         # end my code: ===============
         
         self.fc_gamma = nn.Sequential(OrderedDict([

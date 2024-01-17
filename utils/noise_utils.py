@@ -13,7 +13,7 @@ def gen_perturbation(generator ,text_embedding, noise_shape, args=None):
     else:
         norm_type = "l2"
         epsilon = 8
-        device = 'cuda:0'
+        device = 'cuda:1'
     noise = torch.randn(batch_size, 100).to(device)
     with torch.no_grad():
         gen_image, _ = generator(noise, sec_emb)

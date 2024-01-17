@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 import os
-import ruamel.yaml as yaml
 import clip
 from pathlib import Path
 
@@ -35,7 +34,7 @@ from PIL import Image
 from tqdm import tqdm
 import logging
 
-json_cat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat.json"
+json_cat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
 json_nocat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-cat.json"
 
 
@@ -51,20 +50,21 @@ otherDs = jsonDataset(json_nocat_path, img_transform = myTrans)
 myDataloader = DataLoader(catDs, batch_size=16, shuffle=True,drop_last=True)
 otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
 
-device = "cuda:0"
-generator = NetG()
+device = "cuda:1"
+
+clip_version = 'RN50'
+model, _ = clip.load(clip_version, device, jit=False)
+model = model.float()
+model = model.to(device) 
+
+text_embedding_dim = model.text_projection.shape[1]
+generator = NetG(ngf=text_embedding_dim)
 generator = generator.to(device)
 generator.train()
-
 
 # update the optimizer lr from 0.0001 -> 0.001
 optimizerG = torch.optim.Adam(generator.parameters(), lr=0.001, betas=(0.0, 0.9))
 schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
-
-clip_version = 'ViT-B/16'
-model, _ = clip.load(clip_version, device, jit=False)
-model = model.float()
-model = model.to(device) 
 
 freeze_encoder = model.visual
 logging.info("freeze image encoder")
@@ -92,6 +92,7 @@ loss_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/record/los
 loss_list = []
 loss_sum = 0
 epoch = 200
+clip_version = clip_version.replace("/", "_")
 log_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/log_{}.txt".format(clip_version)
 logging.basicConfig(filename=log_tgt_path, level=logging.INFO)
 g_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn"
@@ -109,7 +110,7 @@ for epoch_idx in range(epoch):
         
         noise = torch.randn(batch_size, 100).to(device)
         text_embedding = model.encode_text(text)
-        delta_im = gen_perturbation(generator, text_embedding, imgs, args=None)
+        delta_im = gen_perturbation(generator, text_embedding, imgs.shape, args=None)
         
         images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
         images_adv = clip_normalize(images_adv)
@@ -136,4 +137,4 @@ for epoch_idx in range(epoch):
     mean_loss = np.mean(loss_list)
     logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
     # save the cur generator model 
-    torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_epoch{}_loss{}.pth".format(epoch_idx, mean_loss)))
+    torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
