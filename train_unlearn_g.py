@@ -58,7 +58,7 @@ model = model.float()
 model = model.to(device) 
 
 text_embedding_dim = model.text_projection.shape[1]
-generator = NetG(ngf=text_embedding_dim)
+generator = NetG(ngf=text_embedding_dim//8)
 generator = generator.to(device)
 generator.train()
 
@@ -91,7 +91,7 @@ loss_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/record/los
 
 loss_list = []
 loss_sum = 0
-epoch = 200
+epoch = 201
 clip_version = clip_version.replace("/", "_")
 log_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/log_{}.txt".format(clip_version)
 logging.basicConfig(filename=log_tgt_path, level=logging.INFO)
@@ -137,4 +137,5 @@ for epoch_idx in range(epoch):
     mean_loss = np.mean(loss_list)
     logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
     # save the cur generator model 
-    torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
+    if epoch_idx % 20 == 0:
+        torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))

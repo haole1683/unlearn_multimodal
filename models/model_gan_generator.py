@@ -69,13 +69,14 @@ class NetG(nn.Module):
 
         # layer1输入的是一个100x1x1的随机噪声, 输出尺寸(ngf*8)x4x4
         self.fc = nn.Linear(nz, ngf * 8 * 4 * 4)
-        self.block0 = G_Block(ngf * 8, ngf * 8)  # 4x4
-        self.block1 = G_Block(ngf * 8, ngf * 8)  # 8x8
-        self.block2 = G_Block(ngf * 8, ngf * 8)  # 16x16
-        self.block3 = G_Block(ngf * 8, ngf * 8)  # 32x32
-        self.block4 = G_Block(ngf * 8, ngf * 4)  # 64x64
-        self.block5 = G_Block(ngf * 4, ngf * 2)  # 128x128
-        self.block6 = G_Block(ngf * 2, ngf * 1, predict_mask=False)  # 256x256
+        self.sec_emb_len = ngf * 8
+        self.block0 = G_Block(ngf * 8, ngf * 8, sec_emb_len=self.sec_emb_len)  # 4x4
+        self.block1 = G_Block(ngf * 8, ngf * 8, sec_emb_len=self.sec_emb_len)  # 8x8
+        self.block2 = G_Block(ngf * 8, ngf * 8, sec_emb_len=self.sec_emb_len)  # 16x16
+        self.block3 = G_Block(ngf * 8, ngf * 8, sec_emb_len=self.sec_emb_len)  # 32x32
+        self.block4 = G_Block(ngf * 8, ngf * 4, sec_emb_len=self.sec_emb_len)  # 64x64
+        self.block5 = G_Block(ngf * 4, ngf * 2, sec_emb_len=self.sec_emb_len)  # 128x128
+        self.block6 = G_Block(ngf * 2, ngf * 1, sec_emb_len=self.sec_emb_len, predict_mask=False)  # 256x256
 
         self.conv_img = nn.Sequential(
             BatchNorm(ngf),
@@ -144,16 +145,16 @@ class NetG(nn.Module):
 
 class G_Block(nn.Module):
 
-    def __init__(self, in_ch, out_ch, num_w=256, predict_mask=True):
+    def __init__(self, in_ch, out_ch, sec_emb_len=512, predict_mask=True):
         super(G_Block, self).__init__()
 
         self.learnable_sc = in_ch != out_ch
         self.predict_mask = predict_mask
         self.c1 = nn.Conv2d(in_ch, out_ch, 3, 1, 1)
         self.c2 = nn.Conv2d(out_ch, out_ch, 3, 1, 1)
-        self.affine0 = affine(in_ch)
+        self.affine0 = affine(in_ch, sec_emb_len=sec_emb_len)
         #self.affine1 = affine(in_ch)
-        self.affine2 = affine(out_ch)
+        self.affine2 = affine(out_ch, sec_emb_len=sec_emb_len)
         #self.affine3 = affine(out_ch)
         self.gamma = nn.Parameter(torch.zeros(1))
         if self.learnable_sc:

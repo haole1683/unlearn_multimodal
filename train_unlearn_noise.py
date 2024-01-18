@@ -70,16 +70,16 @@ otherDs = myDataset(json_nocat_path, img_transform = myTrans)
 myDataloader = DataLoader(catDs, batch_size=128, shuffle=False,drop_last=False)
 otherDataloader = DataLoader(otherDs, batch_size=128, shuffle=True,drop_last=True)
 
-device = "cuda:1"
+device = "cuda:0"
 
 from tqdm import tqdm
 
 
-data_iter = iter(myDataloader)
+data_iter = iter(otherDataloader)
 condition = True
 train_idx = 0
 
-clip_version = 'ViT-B/16'
+clip_version = 'RN50'
 model, _ = clip.load(clip_version, device, jit=False)
 model = model.float()
 model = model.to(device) 
@@ -109,7 +109,7 @@ if os.path.exists(load_noise_path):
 else:
     noise = torch.zeros([sample_nums, 3, 224, 224])
     
-epoch_num = 20
+epoch_num = 21
 tokenizer = clip.tokenize
 
 for epoch_idx in range(epoch_num):
@@ -167,12 +167,16 @@ for epoch_idx in range(epoch_num):
         loop.set_description('Loss: %.4f' % (loss_value))
         
     # save the noise
-    tgt_folder = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_unlearn_noise"
+    clip_version = clip_version.replace("/", "_")
+    tgt_folder = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_unlearn_noise_{}".format(clip_version)
+    if not os.path.exists(tgt_folder):
+        os.makedirs(tgt_folder)
     save_obj = {
         "noise": noise,
     }
     loss_avg = np.mean(loss_list)
-    torch.save(save_obj, os.path.join(tgt_folder, "noise_epoch{}_loss{}.pth".format(epoch_idx, loss_avg)))
+    if epoch_idx % 10 == 0:
+        torch.save(save_obj, os.path.join(tgt_folder, "noise_epoch{}_loss{}.pth".format(epoch_idx, loss_avg)))
     
     # Eval stop condition
     # eval_idx, total, correct = 0, 0, 0
