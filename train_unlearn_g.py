@@ -50,7 +50,7 @@ otherDs = jsonDataset(json_nocat_path, img_transform = myTrans)
 myDataloader = DataLoader(catDs, batch_size=16, shuffle=True,drop_last=True)
 otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
 
-device = "cuda:1"
+device = "cuda:0"
 
 clip_version = 'RN50'
 model, _ = clip.load(clip_version, device, jit=False)

@@ -1,10 +1,11 @@
 import torch
 import torch.nn.functional as F
 
-def gen_perturbation(generator ,text_embedding, noise_shape, args=None):
+def gen_perturbation(generator ,text_embedding, noise_shape, evaluate=False,args=None):
     batch_size = noise_shape[0]
     sec_emb = text_embedding
-    generator.eval()
+    if evaluate:
+        generator.eval()
     
     if args:
         norm_type = args.norm_type
@@ -12,10 +13,13 @@ def gen_perturbation(generator ,text_embedding, noise_shape, args=None):
         device = args.device
     else:
         norm_type = "l2"
-        epsilon = 8
-        device = 'cuda:1'
+        epsilon = 16
+        device = 'cuda:0'
     noise = torch.randn(batch_size, 100).to(device)
-    with torch.no_grad():
+    if evaluate:
+        with torch.no_grad():
+            gen_image, _ = generator(noise, sec_emb)
+    else:
         gen_image, _ = generator(noise, sec_emb)
     delta_im = gen_image
     if norm_type == "l2":

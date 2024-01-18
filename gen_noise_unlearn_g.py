@@ -34,7 +34,7 @@ from PIL import Image
 
 from tqdm import tqdm
 import logging
-
+from torchvision.utils import save_image
 json_cat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
 
 myTrans = transforms.Compose([
@@ -91,6 +91,9 @@ with torch.no_grad():
             the_noises[index[i]] = delta_im[i]
         
         images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
+        save_image(imgs, "text_img_clean.jpg")
+        save_image(images_adv, "test_img_adv.jpg")
+        print(imgs.eq(images_adv))
         images_adv = clip_normalize(images_adv)
         
         unlearn_img_embedding = model.encode_image(images_adv)
@@ -100,6 +103,7 @@ with torch.no_grad():
         the_loss_value = loss.detach().cpu().numpy()
         
         loop.set_postfix(loss = the_loss_value)
+        break
         
     save_tgt = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori.pt"
     torch.save(the_noises, save_tgt)
