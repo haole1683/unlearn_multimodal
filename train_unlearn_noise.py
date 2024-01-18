@@ -67,15 +67,15 @@ myTrans = transforms.Compose([
 catDs = myDataset(json_cat_path, img_transform = myTrans)
 otherDs = myDataset(json_nocat_path, img_transform = myTrans)
 
-myDataloader = DataLoader(catDs, batch_size=128, shuffle=False,drop_last=False)
-otherDataloader = DataLoader(otherDs, batch_size=128, shuffle=True,drop_last=True)
+myDataloader = DataLoader(catDs, batch_size=64, shuffle=False,drop_last=False)
+otherDataloader = DataLoader(otherDs, batch_size=64, shuffle=True,drop_last=True)
 
-device = "cuda:0"
+device = "cuda:1"
 
 from tqdm import tqdm
 
 
-data_iter = iter(otherDataloader)
+other_data_iter = iter(otherDataloader)
 condition = True
 train_idx = 0
 
@@ -109,7 +109,7 @@ if os.path.exists(load_noise_path):
 else:
     noise = torch.zeros([sample_nums, 3, 224, 224])
     
-epoch_num = 21
+epoch_num = 101
 tokenizer = clip.tokenize
 
 for epoch_idx in range(epoch_num):
@@ -158,7 +158,8 @@ for epoch_idx in range(epoch_num):
         base_model.eval()
         
         images, text = images.to(device), text.to(device)
-        loss_value, perturb_img, eta = noise_generator.min_min_CLIP_attack(device,images, text, base_model,clip_normalize, infoNCE_criterion, 
+        other_imgs = next(other_data_iter)[1].to(device)
+        loss_value, perturb_img, eta = noise_generator.min_min_CLIP_attack(device,images, text,other_imgs, base_model,clip_normalize, infoNCE_criterion, 
                                                           random_noise=batch_noise)
         for i, delta in enumerate(eta):
             noise[batch_start_idx+i] = delta.clone().detach().cpu()

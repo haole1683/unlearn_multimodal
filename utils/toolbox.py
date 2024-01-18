@@ -51,7 +51,7 @@ class PerturbationTool():
 
         return perturb_img, eta
     
-    def min_min_CLIP_attack(self,device, images, text, model,clip_normalize, criterion, random_noise=None):
+    def min_min_CLIP_attack(self,device, images, text,other_imgs, model,clip_normalize, criterion, random_noise=None):
         if random_noise is None:
             random_noise = torch.FloatTensor(*images.shape).uniform_(-self.epsilon, self.epsilon).to(device)
 
@@ -74,9 +74,11 @@ class PerturbationTool():
             # loss = model(perturb_img, text)
             
             perturb_img_norm = clip_normalize(perturb_img)
+            other_img_norm = clip_normalize(other_imgs)
             perturb_img_embedding = model.encode_image(perturb_img_norm)
+            other_img_embedding = model.encode_image(other_img_norm)
             text_embedding = model.encode_text(text)
-            loss = criterion(perturb_img_embedding, text_embedding)
+            loss = criterion(perturb_img_embedding, text_embedding, other_img_embedding)
             
             perturb_img.retain_grad()
             loss.backward()

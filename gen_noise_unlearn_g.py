@@ -44,7 +44,7 @@ myTrans = transforms.Compose([
 
 catDs = jsonDataset(json_cat_path, img_transform = myTrans)
 
-myDataloader = DataLoader(catDs, batch_size=16, shuffle=False,drop_last=True)
+myDataloader = DataLoader(catDs, batch_size=8, shuffle=False,drop_last=True)
 
 device = "cuda:0"
 generator = NetG()
