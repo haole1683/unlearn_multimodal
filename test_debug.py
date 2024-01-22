@@ -1,4 +1,4 @@
-from download_train_solo import classify
+from downstream_train_solo import classify
 from utils.clip_util import get_clip_model
 import time 
 
