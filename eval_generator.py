@@ -47,14 +47,21 @@ catDs = jsonDataset(json_cat_path, img_transform = myTrans)
 myDataloader = DataLoader(catDs, batch_size=8, shuffle=False,drop_last=True)
 
 device = "cuda:0"
-generator = NetG()
-generator = generator.to(device)
-generator.train()
 
-clip_version = 'ViT-B/16'
+clip_version = 'RN50'
 model, _ = clip.load(clip_version, device, jit=False)
 model = model.float()
 model = model.to(device) 
+
+text_embedding_dim = model.text_projection.shape[1]
+generator = NetG(ngf=text_embedding_dim//8)
+generator = generator.to(device)
+
+
+generator_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_versionRN50_epoch200_loss0.11304377764463425.pth"
+generator.load_state_dict(torch.load(generator_path))
+
+generator.eval()
 
 freeze_encoder = model.visual
 logging.info("freeze image encoder")
@@ -77,6 +84,10 @@ infoNCE_loss = InfoNCE()
 
 loop = tqdm(myDataloader, desc='Train')
 the_noises = [torch.ones(3,224,224)] * len(catDs) 
+visualize = False
+
+tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/useless_code"
+
 with torch.no_grad():
     for batch in loop:
         text = tokenizer(batch[0], truncate=True).to(device)
@@ -87,13 +98,18 @@ with torch.no_grad():
         text_embedding = model.encode_text(text)
         delta_im = gen_perturbation(generator, text_embedding, imgs.shape, args=None)
         
+        print(delta_im[0].eq(delta_im[1]))
+        
+        
+        
         for i in range(batch_size):
             the_noises[index[i]] = delta_im[i]
         
         images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
-        save_image(imgs, "text_img_clean.jpg")
-        save_image(images_adv, "test_img_adv.jpg")
-        print(imgs.eq(images_adv))
+        if visualize:
+            save_image(imgs, "text_img_clean.jpg")
+            save_image(images_adv, "test_img_adv.jpg")
+            print(imgs.eq(images_adv))
         images_adv = clip_normalize(images_adv)
         
         unlearn_img_embedding = model.encode_image(images_adv)
@@ -104,6 +120,6 @@ with torch.no_grad():
         
         loop.set_postfix(loss = the_loss_value)
         break
-        
+    noise_name = "cat_noise_{}".format(clip_version.replace("/","-"))
     save_tgt = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori.pt"
     torch.save(the_noises, save_tgt)

@@ -59,6 +59,13 @@ model = model.to(device)
 
 text_embedding_dim = model.text_projection.shape[1]
 generator = NetG(ngf=text_embedding_dim//8)
+
+generator_checkpoint_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_unlearn_noise_RN50/noise_epoch90_loss0.07726054638624191.pth"
+
+if generator_checkpoint_path is not None:
+    generator.load_state_dict(torch.load(generator_checkpoint_path))
+    logging.info("load generator checkpoint from {}".format(generator_checkpoint_path))
+    
 generator = generator.to(device)
 generator.train()
 

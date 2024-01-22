@@ -1,5 +1,10 @@
-from train_downstream_solo import classify
+from download_train_solo import classify
 from utils.clip_util import get_clip_model
+import time 
+
+t = time.time()
+
+start_time = time.time()
 
 clip = get_clip_model('ViT-B/16','cuda:0')
 
@@ -20,3 +25,7 @@ ue_train_cifar10, cifar_test = load_poison_dataset("cifar10", noise, myTrans)
 clean_train_cifar10, cifar_test = load_class_dataset("CIFAR10", myTrans)
 
 classify(clip, ue_train_cifar10, cifar_test)
+
+end_time = time.time()
+
+print(f'coast:{end_time - start_time:.4f}s')

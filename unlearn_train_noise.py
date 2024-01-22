@@ -158,7 +158,13 @@ for epoch_idx in range(epoch_num):
         base_model.eval()
         
         images, text = images.to(device), text.to(device)
-        other_imgs = next(other_data_iter)[1].to(device)
+        # if the other_data_iter is exhausted, reset it
+        try:
+            other_imgs = next(other_data_iter)[1].to(device)
+        except:
+            other_data_iter = iter(otherDataloader)
+            other_imgs = next(other_data_iter)[1].to(device)
+            
         loss_value, perturb_img, eta = noise_generator.min_min_CLIP_attack(device,images, text,other_imgs, base_model,clip_normalize, infoNCE_criterion, 
                                                           random_noise=batch_noise)
         for i, delta in enumerate(eta):
