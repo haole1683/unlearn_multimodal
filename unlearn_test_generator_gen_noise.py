@@ -18,7 +18,7 @@ myTrans = transforms.Compose([
 device = "cuda:0"
 
 def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
-    trainDataset, testDataset = load_class_dataset('CIFAR10',myTrans)
+    # trainDataset, testDataset = load_class_dataset('CIFAR10',myTrans)
 
     model, _ = clip.load(clip_version, device, jit=False)
     model = model.float()
@@ -52,3 +52,6 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_{}.pt".format(clip_version)
 
     torch.save(delta_im.detach().cpu(), tgt_save_path)
+
+generator_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_versionRN50_epoch200_loss0.11304377764463425.pth"
+generate_noise_from_pretrain(generator_path)
