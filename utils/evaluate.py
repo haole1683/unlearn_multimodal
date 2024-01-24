@@ -1046,6 +1046,49 @@ def cal_target_attack_acc(output, target, attack_target):
     correct = pred.eq(attack_target.view(1, -1).expand_as(pred))
     return float(correct[:1].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
 
+
+def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weights,device):
+    cat_correct, cat_total = 0,0
+    correct_count = {}
+
+    for class_name in test_set.classes:
+        correct_count[class_name] = 0
+        
+    with torch.no_grad():
+        top1, top5, n = 0., 0., 0.
+        tgt_top1 = 0.
+        for i, (images, target) in enumerate(tqdm(test_dataloader)):
+            images = images.to(device)
+            target = target.to(device)
+
+            image_features = model.encode_image(images)
+                    
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            logits = 100. * image_features @ zeroshot_weights
+
+            # measure misclassification accuracy
+            acc1, acc5 = cal_accuracy(logits, target, topk=(1, 5))
+            top1 += acc1
+            top5 += acc5
+            
+            labels = target
+            predicted = logits.argmax(1)
+
+            for class_name in test_set.classes:
+                class_label = test_set.class_to_idx[class_name]
+                correct_count[class_name] += ((predicted == labels) & (labels == class_label)).sum().item()
+                
+            n += images.size(0)
+
+    top1 = (top1 / n) * 100
+    top5 = (top5 / n) * 100
+ 
+    print(f"Top-1 accuracy: {top1}")
+    print(f"Top-5 accuracy: {top5}")
+    for key in correct_count.keys():
+        print("The category {} : acc: {}%".format(key, correct_count[key] / 1000))
+    return top1, top5
+
 def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     
     cat_correct, cat_total = 0,0

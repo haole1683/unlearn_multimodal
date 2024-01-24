@@ -13,7 +13,7 @@ from utils.noise_utils import gen_perturbation
 from utils.record import record_result
 from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
 from utils.data_utils import load_class_dataset
-from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn
+from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn, zero_shot_with_each_class_acc
 
 def test_zero_shot(model, clip_version=None):
     device = "cuda:0"
@@ -33,7 +33,7 @@ def test_zero_shot(model, clip_version=None):
     
     ################## zero shot ###########################
     print("Start zero shot")
-    top1, top5 = zero_shot(test_dataloader, model, zeroshot_weights, device, process_fn=process_fn)
+    top1, top5 = zero_shot_with_each_class_acc(test_dataloader, test_dataset, model, zeroshot_weights, device)
     print(f"Zero shot result: top1: {top1}, top5: {top5}")
     
     ################## linear probe #########################

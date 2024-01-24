@@ -48,7 +48,7 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
     metric_logger.add_meter('lr', ori_utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('total_loss', ori_utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
     header = 'Train Epoch: [{}]'.format(epoch)
-    print_freq = 1
+    print_freq = 20
     step_size = 100
     warmup_iterations = warmup_steps*step_size 
 
@@ -144,7 +144,7 @@ def main(args=None):
     poisoned = False
     # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
     json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
-    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori.pt"
+    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
     if not poisoned:
         train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans)
     else:
@@ -231,7 +231,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default='output/clip_poison_pascal_sheep2aeroplane_1.00/')
     args = parser.parse_args()
 
-    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip"
+    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip_RN50"
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     main(args)
