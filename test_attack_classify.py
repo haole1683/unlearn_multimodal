@@ -33,6 +33,9 @@ def test_zero_shot(model, clip_version=None):
     
     ################## zero shot ###########################
     print("Start zero shot")
+    top1, top5 = zero_shot(test_dataloader, model, zeroshot_weights, device)
+    print(f"Zero shot result: top1: {top1}, top5: {top5}")
+    
     top1, top5 = zero_shot_with_each_class_acc(test_dataloader, test_dataset, model, zeroshot_weights, device)
     print(f"Zero shot result: top1: {top1}, top5: {top5}")
     

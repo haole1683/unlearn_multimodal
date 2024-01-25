@@ -1048,7 +1048,6 @@ def cal_target_attack_acc(output, target, attack_target):
 
 
 def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weights,device):
-    cat_correct, cat_total = 0,0
     correct_count = {}
 
     for class_name in test_set.classes:
@@ -1056,7 +1055,6 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
         
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
-        tgt_top1 = 0.
         for i, (images, target) in enumerate(tqdm(test_dataloader)):
             images = images.to(device)
             target = target.to(device)
