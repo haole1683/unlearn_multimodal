@@ -35,6 +35,7 @@ from test_attack_classify import test_zero_shot
 
 def evalutate(model):
     test_cifar_10_result = test_zero_shot(model)
+    
     return test_cifar_10_result
 
 def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
@@ -109,6 +110,11 @@ def main(args=None):
     logging.info("Creating model")
     model, _ = clip.load(args.clip_model, device, jit=False)
     model = model.float()
+    
+    result = evalutate(model)
+    print("RESULT:")
+    print(result)
+    
     tokenizer = clip.tokenize
 
     start_epoch = 0
@@ -223,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
 
     # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip")
+    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # config overload

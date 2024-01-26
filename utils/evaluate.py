@@ -1047,7 +1047,7 @@ def cal_target_attack_acc(output, target, attack_target):
     return float(correct[:1].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
 
 
-def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weights,device):
+def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weights,device, process_fn=None):
     correct_count = {}
 
     for class_name in test_set.classes:
@@ -1058,8 +1058,12 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
         for i, (images, target) in enumerate(tqdm(test_dataloader)):
             images = images.to(device)
             target = target.to(device)
-
-            image_features = model.encode_image(images)
+            
+            if process_fn:
+                images_adv = process_fn(images)
+                image_features = model.encode_image(images_adv)
+            else:
+                image_features = model.encode_image(images)
                     
             image_features /= image_features.norm(dim=-1, keepdim=True)
             logits = 100. * image_features @ zeroshot_weights
