@@ -35,7 +35,6 @@ from test_attack_classify import test_zero_shot
 
 def evalutate(model):
     test_cifar_10_result = test_zero_shot(model)
-    
     return test_cifar_10_result
 
 def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
@@ -111,14 +110,11 @@ def main(args=None):
     model, _ = clip.load(args.clip_model, device, jit=False)
     model = model.float()
     
-    result = evalutate(model)
-    print("RESULT:")
-    print(result)
-    
     tokenizer = clip.tokenize
 
     start_epoch = 0
 
+    args.freeze_encoder = 'text'    # freeze the encoder
     if args.freeze_encoder == 'image':
         freeze_encoder = model.visual
         for param in freeze_encoder.parameters():

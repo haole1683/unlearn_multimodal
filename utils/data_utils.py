@@ -231,6 +231,55 @@ def get_dataset_class(dataset_name):
     train_dataset = load_class_dataset(dataset_name, None)[0]
     return train_dataset.classes
 
+import torch
+from torchvision import datasets, transforms
+
+# Define prompts
+prompts = ["This is a picture of a", "Here is an image of a", "Check out this photo of a"]
+
+class ImageTextDatasetFromSupervisedDataset(Dataset):
+    def __init__(self, dataset_name, split='train', transform=None) -> None:
+        super().__init__()
+        self.supervised_train_dataset, self.supervised_test_dataset = load_class_dataset(dataset_name, None)[0]  
+        
+        # Transformations for the dataset
+        if transform is None:
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        else:
+            self.transform = transform
+            
+        if split == 'train':    
+            self.dataset = self.supervised_train_dataset
+        else:
+            self.dataset = self.supervised_test_dataset
+        
+        self.image_list, self.text_list = self.construct_dataset(self.dataset)
+    
+    def construct_prompt(self, label):
+        text_prompt = "This is a picture of a {}"
+        text = text_prompt.format(label)
+        return text 
+    
+    def construct_dataset(self, dataset):
+        image_list, text_list = [], []
+        for index in range(len(dataset)):
+            image, label = self.supervised_dataset[index]
+            text = self.construct_prompt(label)
+            image_list.append(image)
+            text_list.append(text)
+        return image_list, text_list
+        
+    def __len__(self):
+        return len(self.image_list)
+    
+    def __getitem__(self, index):
+        return self.image_list[index], self.text_list[index]
+
+
+
 
 
 def create_sampler(datasets, shuffles, num_tasks, global_rank):
