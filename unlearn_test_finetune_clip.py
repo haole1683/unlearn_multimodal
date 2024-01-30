@@ -25,7 +25,7 @@ from optim import create_optimizer
 from utils import distributed_utils 
 from utils import ori_utils 
 from utils.data_utils import (
-    jsonPoisonDataset, jsonDataset, create_loader, create_sampler,
+    jsonPoisonDataset, jsonDataset, create_loader, create_sampler, ImageTextDatasetFromSupervisedDataset,
     ToTensorTrans,  To244TensorTrans, create_simple_loader
 )
 from utils.clip_util import (
@@ -55,10 +55,11 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
     
     scaler = GradScaler()
     
-    for i,(text, image, idx) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for i,(image, text) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+        # batch_size = data_loader.batch_size
         batch_size = len(image)
         image = image.to(device,non_blocking=True)   
-        idx = idx.to(device,non_blocking=True)   
+        # idx = idx.to(device,non_blocking=True)   
         text = tokenizer(text, truncate=True).to(device)
 
         optimizer.zero_grad()
@@ -144,14 +145,18 @@ def main(args=None):
     
     #### Dataset #### 
     poisoned = False
-    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
-    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
-    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
-    if not poisoned:
-        train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans)
-    else:
-        train_dataset = jsonPoisonDataset(json_path, noise_path, img_transform = To244TensorTrans)
+    # # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
+    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+    # noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
+    # if not poisoned:
+    #     train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans, contain_index=False)
+    # else:
+    #     train_dataset = jsonPoisonDataset(json_path, noise_path, img_transform = To244TensorTrans, contain_index=False)
 
+    # This is for cifar10 to imageTextDataset
+    train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
+    print("You are loading the dataset of cifar10 image-text pair dataset")
+    
     train_loader = create_simple_loader(train_dataset)
     
     max_epoch = 10
@@ -160,8 +165,8 @@ def main(args=None):
     logging.info("Start training")
     start_time = time.time()    
     for epoch in range(start_epoch, max_epoch):
-        if args.distributed:
-            train_loader.sampler.set_epoch(epoch)
+        # if args.distributed:
+        #     train_loader.sampler.set_epoch(epoch)
         result = evalutate(model)
         print(result)
         train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  

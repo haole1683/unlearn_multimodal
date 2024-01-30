@@ -150,10 +150,11 @@ def load_poison_dataset(dataset_name, noise, transform):
         return unlearnable_train_dataset, test_dataset
 
 class jsonDataset(Dataset):
-    def __init__(self,json_path,text_transform=None, img_transform=None):
+    def __init__(self,json_path,text_transform=None, img_transform=None, contain_index=False):
         self.json_data = json.load(open(json_path,'r'))
         self.text_transform = text_transform
         self.img_transform = img_transform
+        self.contain_index = contain_index
     def __getitem__(self,idx):
         sample = self.json_data[idx]
         text, img_path, index = sample['caption'], sample['image_path'], sample['index']
@@ -163,12 +164,15 @@ class jsonDataset(Dataset):
             text = self.text_transform(text)
         if self.img_transform:
             img = self.img_transform(img)
-        return text, img, index
+        if self.contain_index:
+            return img, text, index
+        else:
+            return img, text, index
     def __len__(self):
         return len(self.json_data)
 
 class jsonPoisonDataset(Dataset):
-    def __init__(self,json_path,noise_path,text_transform=None, img_transform=None):
+    def __init__(self,json_path,noise_path,text_transform=None, img_transform=None, contain_index=False):
         self.json_data = json.load(open(json_path,'r'))
         self.noise_list = torch.load(noise_path)
         if len(self.json_data) != len(self.noise_list):
@@ -176,6 +180,8 @@ class jsonPoisonDataset(Dataset):
         
         self.text_transform = text_transform
         self.img_transform = img_transform
+        
+        self.contain_index = contain_index
     def __getitem__(self,idx):
         sample = self.json_data[idx]
         text, img_path, index = sample['caption'], sample['image_path'], sample['index']
@@ -188,7 +194,10 @@ class jsonPoisonDataset(Dataset):
         the_noise = self.noise_list[index]
         the_noise = the_noise.to(img.device)
         poison_img = torch.clamp(img + the_noise, min=0, max=1)
-        return text, poison_img, index
+        if self.contain_index:
+            return poison_img, text
+        else:
+            return poison_img, text, index
     def __len__(self):
         return len(self.json_data)
 
@@ -234,19 +243,16 @@ def get_dataset_class(dataset_name):
 import torch
 from torchvision import datasets, transforms
 
-# Define prompts
-prompts = ["This is a picture of a", "Here is an image of a", "Check out this photo of a"]
-
 class ImageTextDatasetFromSupervisedDataset(Dataset):
     def __init__(self, dataset_name, split='train', transform=None) -> None:
         super().__init__()
-        self.supervised_train_dataset, self.supervised_test_dataset = load_class_dataset(dataset_name, None)[0]  
+        self.supervised_train_dataset, self.supervised_test_dataset = load_class_dataset(dataset_name, None)
         
         # Transformations for the dataset
         if transform is None:
             self.transform = transforms.Compose([
+                transforms.Resize((224,224)),
                 transforms.ToTensor(),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ])
         else:
             self.transform = transform
@@ -266,8 +272,9 @@ class ImageTextDatasetFromSupervisedDataset(Dataset):
     def construct_dataset(self, dataset):
         image_list, text_list = [], []
         for index in range(len(dataset)):
-            image, label = self.supervised_dataset[index]
-            text = self.construct_prompt(label)
+            image, label = self.dataset[index]
+            label_name = self.dataset.classes[label]
+            text = self.construct_prompt(label_name)
             image_list.append(image)
             text_list.append(text)
         return image_list, text_list
@@ -276,7 +283,10 @@ class ImageTextDatasetFromSupervisedDataset(Dataset):
         return len(self.image_list)
     
     def __getitem__(self, index):
-        return self.image_list[index], self.text_list[index]
+        image, text = self.image_list[index], self.text_list[index]
+        if self.transform:
+            image = self.transform(image)
+        return image, text
 
 
 

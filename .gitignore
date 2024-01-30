@@ -8,3 +8,4 @@ tmp*
 *.png
 *.jpg
 /output_ori/
+*.log
