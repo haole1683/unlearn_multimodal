@@ -159,7 +159,7 @@ def main(args=None):
     
     train_loader = create_simple_loader(train_dataset)
     
-    max_epoch = 10
+    max_epoch = 40
     warmup_steps = 10
 
     logging.info("Start training")
