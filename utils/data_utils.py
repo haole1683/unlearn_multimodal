@@ -126,7 +126,7 @@ def load_poison_dataset(dataset_name, noise, transform):
         noise_path (Tensor): noise([5000,3,32,32])
         transform (Transforms): transform
     """
-    if dataset_name == 'cifar10':
+    if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
         unlearnable_train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
         test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
         
@@ -288,7 +288,52 @@ class ImageTextDatasetFromSupervisedDataset(Dataset):
             image = self.transform(image)
         return image, text
 
+class ImageTextDatasetFromSupervisedDatasetPoison(Dataset):
+    def __init__(self, dataset_name, split='train', transform=None, noise_path=None) -> None:
+        super().__init__()
+        noise = torch.load(noise_path)
+        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, noise, None)
+        
+        # Transformations for the dataset
+        if transform is None:
+            self.transform = transforms.Compose([
+                transforms.Resize((224,224)),
+                transforms.ToTensor(),
+            ])
+        else:
+            self.transform = transform
+            
+        if split == 'train':    
+            self.dataset = self.supervised_train_dataset
+        else:
+            self.dataset = self.supervised_test_dataset
+        
+        self.image_list, self.text_list = self.construct_dataset(self.dataset)
 
+    def construct_prompt(self, label):
+        text_prompt = "This is a picture of a {}"
+        text = text_prompt.format(label)
+        return text 
+    
+    def construct_dataset(self, dataset):
+        image_list, text_list = [], []
+        for index in range(len(dataset)):
+            image, label = self.dataset[index]
+            label_name = self.dataset.classes[label]
+            text = self.construct_prompt(label_name)
+            image_list.append(image)
+            text_list.append(text)
+        return image_list, text_list
+        
+    def __len__(self):
+        return len(self.image_list)
+    
+    def __getitem__(self, index):
+        image, text = self.image_list[index], self.text_list[index]
+        
+        if self.transform:
+            image = self.transform(image)
+        return image, text
 
 
 

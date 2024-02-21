@@ -25,7 +25,8 @@ from optim import create_optimizer
 from utils import distributed_utils 
 from utils import ori_utils 
 from utils.data_utils import (
-    jsonPoisonDataset, jsonDataset, create_loader, create_sampler, ImageTextDatasetFromSupervisedDataset,
+    jsonPoisonDataset, jsonDataset, create_loader, create_sampler, 
+    ImageTextDatasetFromSupervisedDataset, ImageTextDatasetFromSupervisedDatasetPoison,
     ToTensorTrans,  To244TensorTrans, create_simple_loader
 )
 from utils.clip_util import (
@@ -144,17 +145,23 @@ def main(args=None):
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     #### Dataset #### 
-    poisoned = False
-    # # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
-    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
-    # noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
+    poisoned = True
+    
+    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
+    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+    
+    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
     # if not poisoned:
     #     train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans, contain_index=False)
     # else:
     #     train_dataset = jsonPoisonDataset(json_path, noise_path, img_transform = To244TensorTrans, contain_index=False)
 
     # This is for cifar10 to imageTextDataset
-    train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
+    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt"
+    if not poisoned:
+        train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
+    else:
+        train_dataset = ImageTextDatasetFromSupervisedDatasetPoison("CIFAR10", 'train', transform=To244TensorTrans, noise_path=noise_path)
     print("You are loading the dataset of cifar10 image-text pair dataset")
     
     train_loader = create_simple_loader(train_dataset)
@@ -169,6 +176,8 @@ def main(args=None):
         #     train_loader.sampler.set_epoch(epoch)
         result = evalutate(model)
         print(result)
+        logging.info(f"Epoch {epoch}, result: {result}")
+        
         train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
             
         
@@ -177,9 +186,9 @@ def main(args=None):
             tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip"
             clip_version = args.clip_model.replace('/','_')
             if poisoned:
-                torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch{epoch}.pth"))
+                torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch_{epoch}.pth"))
             else:
-                torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch{epoch}.pth"))        
+                torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch_{epoch}.pth"))        
            
         lr_scheduler.step(epoch+warmup_steps+1)  
         if args.distributed:
@@ -223,7 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--text_encoder', default='bert-base-uncased')
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--debug',  action='store_true')
-    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
