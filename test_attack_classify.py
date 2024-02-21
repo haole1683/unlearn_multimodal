@@ -16,9 +16,11 @@ from utils.data_utils import load_class_dataset
 from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn, zero_shot_with_each_class_acc
 
 def test_zero_shot(model, clip_version=None):
-    device = "cuda:0"
     if isinstance(model, str):
+        device = "cuda:0"
         model, preprocess = clip.load(model, device)
+    else:
+        device = model.text_projection.device
     model.eval()
     # load dataset
     dataset_name = "CIFAR10"

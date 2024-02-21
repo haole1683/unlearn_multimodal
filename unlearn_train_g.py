@@ -37,6 +37,8 @@ import logging
 json_cat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
 json_nocat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-cat.json"
 
+json_truck_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-truck.json"
+json_notruck_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-truck.json"
 
     
 myTrans = transforms.Compose([
@@ -44,11 +46,20 @@ myTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
-catDs = jsonDataset(json_cat_path, img_transform = myTrans)
-otherDs = jsonDataset(json_nocat_path, img_transform = myTrans)
+attack_class_name = "truck"
 
-myDataloader = DataLoader(catDs, batch_size=16, shuffle=True,drop_last=True)
-otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
+if attack_class_name == "truck":
+    json_tgt_path = json_truck_path
+    json_not_tgt_path = json_notruck_path
+elif attack_class_name == "cat":
+    json_tgt_path = json_cat_path
+    json_not_tgt_path = json_nocat_path
+    
+tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans)
+otherDs = jsonDataset(json_not_tgt_path, img_transform = myTrans)
+
+myDataloader = DataLoader(tgtClassDs, batch_size=8, shuffle=True,drop_last=True)
+otherDataloader = DataLoader(otherDs, batch_size=8, shuffle=True,drop_last=True)
 
 device = "cuda:0"
 
@@ -60,7 +71,8 @@ model = model.to(device)
 text_embedding_dim = model.text_projection.shape[1]
 generator = NetG(ngf=text_embedding_dim//8)
 
-generator_checkpoint_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_unlearn_noise_RN50/noise_epoch90_loss0.07726054638624191.pth"
+# generator_checkpoint_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_unlearn_noise_RN50/noise_epoch90_loss0.07726054638624191.pth"
+generator_checkpoint_path = None
 
 if generator_checkpoint_path is not None:
     generator.load_state_dict(torch.load(generator_checkpoint_path))
@@ -110,8 +122,9 @@ for epoch_idx in range(epoch):
     loop = tqdm(myDataloader, desc='Train')
     otherIter = iter(otherDataloader)
     for batch in loop:
-        text = tokenizer(batch[0], truncate=True).to(device)
-        imgs = batch[1].to(device)
+        
+        imgs = batch[0].to(device)
+        text = tokenizer(batch[1], truncate=True).to(device)
         index = batch[2]
         batch_size = imgs.shape[0]
         
@@ -128,7 +141,7 @@ for epoch_idx in range(epoch):
         # ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
         # total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         # loss = total_loss
-        other_imgs = next(otherIter)[1].to(device)
+        other_imgs = next(otherIter)[0].to(device)
         other_imgs = clip_normalize(other_imgs)
         negetive_img_embedding = model.encode_image(other_imgs)
         loss = infoNCE_loss(unlearn_img_embedding, text_embedding, negetive_img_embedding)
@@ -145,4 +158,4 @@ for epoch_idx in range(epoch):
     logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
     # save the cur generator model 
     if epoch_idx % 20 == 0:
-        torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
+        torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_attack{}_version{}_epoch{}_loss{}.pth".format(attack_class_name,clip_version,epoch_idx, mean_loss)))
