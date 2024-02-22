@@ -167,7 +167,7 @@ class jsonDataset(Dataset):
         if self.contain_index:
             return img, text, index
         else:
-            return img, text, index
+            return img, text
     def __len__(self):
         return len(self.json_data)
 
@@ -175,29 +175,33 @@ class jsonPoisonDataset(Dataset):
     def __init__(self,json_path,noise_path,text_transform=None, img_transform=None, contain_index=False):
         self.json_data = json.load(open(json_path,'r'))
         self.noise_list = torch.load(noise_path)
-        if len(self.json_data) != len(self.noise_list):
-            raise ValueError("The number of json data is not equal to the number of noise.")
-        
+
         self.text_transform = text_transform
         self.img_transform = img_transform
         
         self.contain_index = contain_index
     def __getitem__(self,idx):
         sample = self.json_data[idx]
-        text, img_path, index = sample['caption'], sample['image_path'], sample['index']
+        text, img_path, index, label_class = sample['caption'], sample['image_path'], sample['index'], sample['class']
         img = Image.open(img_path)
         img = img.convert('RGB')
         if self.text_transform:
             text = self.text_transform(text)
         if self.img_transform:
             img = self.img_transform(img)
-        the_noise = self.noise_list[index]
-        the_noise = the_noise.to(img.device)
-        poison_img = torch.clamp(img + the_noise, min=0, max=1)
-        if self.contain_index:
-            return poison_img, text
+        
+        if label_class == 'cat':
+            the_noise_index = index % len(self.noise_list)
+            the_noise = self.noise_list[the_noise_index]
+            the_noise = the_noise.to(img.device)
+            the_img = torch.clamp(img + the_noise, min=0, max=1)
         else:
-            return poison_img, text, index
+            the_img = img
+            
+        if self.contain_index:
+            return the_img, text, index
+        else:
+            return the_img, text
     def __len__(self):
         return len(self.json_data)
 
@@ -378,7 +382,7 @@ def create_my_loader(trainDataset, testDataset):
     return clean_train_loader, clean_test_loader
 
 def create_simple_loader(dataset):
-    loader = DataLoader(dataset, batch_size=128,
+    loader = DataLoader(dataset, batch_size=256,
                                 shuffle=True, pin_memory=True,
                                 drop_last=False, num_workers=12)
     return loader

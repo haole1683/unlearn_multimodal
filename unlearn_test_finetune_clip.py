@@ -96,7 +96,8 @@ def main(args=None):
 
     if distributed_utils.is_main_process():
         log_level = logging.INFO
-        distributed_utils.setup_logging(os.path.join(args.output_dir, "out.log"), log_level)
+        log_name = f"finetune_clip_dataset-{args.finetune_dataset}_{'poison' if args.poisoned else 'natural'}.log"
+        distributed_utils.setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
     device = torch.device(args.device)
 
@@ -144,25 +145,28 @@ def main(args=None):
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-6, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
+    finetune_dataset = args.finetune_dataset
     #### Dataset #### 
-    poisoned = True
-    
-    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
-    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
-    
-    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_RN50.pt"
-    # if not poisoned:
-    #     train_dataset = jsonDataset(json_path, img_transform = To244TensorTrans, contain_index=False)
-    # else:
-    #     train_dataset = jsonPoisonDataset(json_path, noise_path, img_transform = To244TensorTrans, contain_index=False)
+    # experiment 1
+    if finetune_dataset == "myLaion":
+        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-truck.json"
+        json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+        
+        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/truck_noise_ori_RN50.pt"
+        if not args.poisoned:
+            train_dataset = jsonDataset(json_all_path, img_transform = To244TensorTrans, contain_index=False)
+        else:
+            train_dataset = jsonPoisonDataset(json_all_path, noise_path, img_transform = To244TensorTrans, contain_index=False)
 
+    # experiment 2
     # This is for cifar10 to imageTextDataset
-    noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt"
-    if not poisoned:
-        train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
-    else:
-        train_dataset = ImageTextDatasetFromSupervisedDatasetPoison("CIFAR10", 'train', transform=To244TensorTrans, noise_path=noise_path)
-    print("You are loading the dataset of cifar10 image-text pair dataset")
+    elif finetune_dataset == "cifar10":
+        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/truck_noise_RN50.pt"
+        if not args.poisoned:
+            train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
+        else:
+            train_dataset = ImageTextDatasetFromSupervisedDatasetPoison("CIFAR10", 'train', transform=To244TensorTrans, noise_path=noise_path)
+        print("You are loading the dataset of cifar10 image-text pair dataset")
     
     train_loader = create_simple_loader(train_dataset)
     
@@ -172,20 +176,19 @@ def main(args=None):
     logging.info("Start training")
     start_time = time.time()    
     for epoch in range(start_epoch, max_epoch):
-        # if args.distributed:
-        #     train_loader.sampler.set_epoch(epoch)
+        if args.distributed:
+            train_loader.sampler.set_epoch(epoch)
         result = evalutate(model)
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
         
         train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
-            
         
         if distributed_utils.is_main_process():  
             # save the model to local
             tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip"
             clip_version = args.clip_model.replace('/','_')
-            if poisoned:
+            if args.poisoned:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch_{epoch}.pth"))
             else:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch_{epoch}.pth"))        
@@ -202,26 +205,6 @@ def main(args=None):
     if distributed_utils.is_main_process():   
         pass           
 
-def run_default_experiment():
-    parser = argparse.ArgumentParser()     
-    parser.add_argument('--device', default='cuda:1')
-    parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
-    parser.add_argument('--distributed', action="store_true")
-
-    # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip")
-    parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
-
-    # config overload
-    parser.add_argument('--output_dir', default='output/clip_poison_pascal_sheep2aeroplane_1.00/')
-    args = parser.parse_args()
-
-    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip"
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-
-    main(args)
             
 if __name__ == '__main__':
 
@@ -229,14 +212,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--dataset', default='pascal')
     parser.add_argument('--checkpoint', default='')   
-    parser.add_argument('--text_encoder', default='bert-base-uncased')
-    parser.add_argument('--evaluate', action='store_true')
-    parser.add_argument('--debug',  action='store_true')
     parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action="store_true")
+    parser.add_argument('--poisoned', action="store_true")
+    parser.add_argument('--finetune_dataset', default='myLaion')
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])

@@ -1,0 +1,5 @@
+1.增加训练集类别数量，训练更为通用的generator，提高generator的泛化能力
+2.对于Truck类别似乎存疑，需要重新跑该实验
+3.测试unlearnable 效果额外添加一个Self-supervised Learning条件下的测试，典型的 Self-Supervised 方法有SimClr， MAE等等，主要还是就
+Simclr进行实验
+4.有监督训练的数据集可以额外进行拓展，诸如STL-10，ImageNet特定类别。

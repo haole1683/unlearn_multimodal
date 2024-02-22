@@ -46,11 +46,11 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     generator.load_state_dict(torch.load(generator_path))
     generator.eval()
     
-    
+    tgt_class = 'truck'
     def gen1():
-        print("Generating noise for cat class in cifar-10 cat class [3,32,32] image")
-
-        text_prompts = [prompt.format("cat") for prompt in prompt_templates]
+        print("Generating noise for tgt class in cifar-10 tgt class [3,32,32] image")
+        
+        text_prompts = [prompt.format(tgt_class) for prompt in prompt_templates]
 
         text_tokens = tokenizer(text_prompts).to(device)
         text_embedding = model.encode_text(text_tokens)
@@ -69,45 +69,46 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         noise1 = torch.concat(noise_list)
         noise1 = noise1[:noise_count]
     
-        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_{}.pt".format(clip_version)
+        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/{}_noise_{}.pt".format(tgt_class,clip_version)
         torch.save(noise1.detach().cpu(), tgt_save_path)
     
     
     def gen2():
-        # Generator noise for Cat class dataset image-pair dataset
-        print("Generating noise for cat class in cat class image-pair dataset [3,224,224] image")
-        gen2 = True
-        if not gen2:
-            return
+        # Generator noise for tgt_class class dataset image-pair dataset
+        print(f"Generating noise for {tgt_class} class in {tgt_class} class image-pair dataset [3,224,224] image")
         
-        json_cat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index.json"
-        json_nocat_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-cat.json"
+        json_tgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}.json"
+        json_notgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-{tgt_class}.json"
             
         myTrans = transforms.Compose([
             transforms.Resize((224,224)),
             transforms.ToTensor()
         ])
 
-        catDs = jsonDataset(json_cat_path, img_transform = myTrans)
-        otherDs = jsonDataset(json_nocat_path, img_transform = myTrans)
+        tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans, contain_index=True)
+        otherDs = jsonDataset(json_notgt_path, img_transform = myTrans)
 
-        myDataloader = DataLoader(catDs, batch_size=16, shuffle=True,drop_last=True)
+        myDataloader = DataLoader(tgtClassDs, batch_size=16, shuffle=True,drop_last=True)
         otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
         
-        dataset_len = len(catDs)
+        dataset_len = len(tgtClassDs)
         noises2 = torch.rand(dataset_len,3,224,224).to(device)
         noise_shape = (16,3,224,224)
         
         for batch in tqdm(myDataloader):
-            text, img, index = batch
+            img, text, index = batch
             text = tokenizer(text, truncate=True).to(device)
             text_embedding = model.encode_text(text)
             with torch.no_grad():
                 delta_im = gen_perturbation(generator, text_embedding, noise_shape,evaluate=True, args=None)
+            index = index % dataset_len
             noises2[index] = delta_im
 
-        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_ori_{}.pt".format(clip_version)
+        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/{}_noise_ori_{}.pt".format(tgt_class, clip_version)
         torch.save(noises2.detach().cpu(), tgt_save_path)    
 
-generator_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_versionRN50_epoch200_loss0.11304377764463425.pth"
+    gen1()
+    gen2()
+    
+generator_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_attacktruck_versionRN50_epoch80_loss0.1627332866191864.pth"
 generate_noise_from_pretrain(generator_path)

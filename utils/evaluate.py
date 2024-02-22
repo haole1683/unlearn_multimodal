@@ -1087,9 +1087,13 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
  
     print(f"Top-1 accuracy: {top1}")
     print(f"Top-5 accuracy: {top5}")
+    
+    class_acc = {}
+    
     for key in correct_count.keys():
+        class_acc[key] = correct_count[key] / 1000
         print("The category {} : acc: {}%".format(key, correct_count[key] / 1000))
-    return top1, top5
+    return top1, top5, class_acc
 
 def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     
