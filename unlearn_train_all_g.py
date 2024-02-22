@@ -96,7 +96,11 @@ def main(args):
     cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     log_tgt_path = os.path.join(output_dir, "log/log_all_generator_{}.txt".format(clip_version))
     logging.basicConfig(filename=log_tgt_path, level=logging.INFO)
-    g_save_path = output_dir
+    g_save_path = os.path.join(output_dir, "checkpoint")
+    
+    Path(g_save_path).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(output_dir, "log")).mkdir(parents=True, exist_ok=True)
+    
     logging.info("Start training")
 
     for epoch_idx in range(epoch):
