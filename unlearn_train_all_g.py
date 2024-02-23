@@ -111,7 +111,6 @@ def main(args):
             index = batch[2]
             batch_size = imgs.shape[0]
             
-            noise = torch.randn(batch_size, 100).to(device)
             text_embedding = clip_model.encode_text(text)
             delta_im = gen_perturbation(generator, text_embedding, imgs.shape, args=None)
             
@@ -125,13 +124,16 @@ def main(args):
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             loss = total_loss
 
-            loss = infoNCE_loss(unlearn_img_embedding, text_embedding)
+            # loss = infoNCE_loss(unlearn_img_embedding, text_embedding)
             
             the_loss_value = loss.detach().cpu().numpy()
             loss_list.append(the_loss_value)
             loss.backward()
             optimizerG.step()
             optimizerG.zero_grad()
+            
+            schedulerG.step()
+            schedulerG.zero_grad()
             
             loop.set_description(f'Epoch [{epoch+1}/{epoch_idx}]')
             loop.set_postfix(loss = the_loss_value)
