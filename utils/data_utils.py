@@ -106,7 +106,7 @@ def load_class_dataset(dataset_name, transform):
     elif dataset_name == 'ImageNet':
         train_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='train', transform=transform)
         test_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=transform)
-    elif dataset_name == 'STL10':
+    elif dataset_name == 'STL10' or dataset_name == 'stl10':
         train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=transform)
         test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=transform)
     elif dataset_name == 'GTSRB':
@@ -129,25 +129,42 @@ def load_poison_dataset(dataset_name, noise, transform):
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
         unlearnable_train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
         test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+    elif dataset_name == 'stl10' or dataset_name == 'STL10':
+        unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=transform)
+        test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=transform)
         
-        target_poison_class_name = "cat"
+    target_poison_class_name = "cat"
+    
+    if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
         target_label = unlearnable_train_dataset.class_to_idx[target_poison_class_name]
+        train_lables = unlearnable_train_dataset.targets
+    elif dataset_name == 'stl10' or dataset_name == 'STL10':
+        class_to_idx_dict = {
+            "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+        }
+        target_label = class_to_idx_dict[target_poison_class_name]
+        train_lables = unlearnable_train_dataset.labels
 
-        perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
-        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
-        noise_idx = 0
-        for i in range(len(unlearnable_train_dataset)):
-            label = unlearnable_train_dataset.targets[i]
-            if label == target_label:  # poison the specific class 'cat'
-                unlearnable_train_dataset.data[i] += perturb_noise[noise_idx]
-                unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
-                noise_idx += 1
-        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
+    image_shape = unlearnable_train_dataset.data[0].shape
+    if noise.shape[1:] != image_shape:
+        raise ValueError("The shape of noise is not equal to the shape of image.")
+        
+    
+    perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
+    unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
+    noise_idx = 0
+    for i in range(len(unlearnable_train_dataset)):
+        label = train_lables[i]
+        if label == target_label:  # poison the specific class 'cat'
+            unlearnable_train_dataset.data[i] += perturb_noise[noise_idx]
+            unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
+            noise_idx += 1
+    unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
 
-        if noise_idx != noise.shape[0]:
-            raise ValueError("The number of noise is not equal to the number of target class.")
+    if noise_idx != noise.shape[0]:
+        raise ValueError("The number of noise is not equal to the number of target class.")
 
-        return unlearnable_train_dataset, test_dataset
+    return unlearnable_train_dataset, test_dataset
 
 class jsonDataset(Dataset):
     def __init__(self,json_path,text_transform=None, img_transform=None, contain_index=False):

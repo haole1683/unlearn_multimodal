@@ -12,6 +12,7 @@ import torchvision.transforms as transforms
 import argparse
 
 import json
+import os
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
@@ -132,6 +133,8 @@ def main(args):
     natural_result = test_supervised(natural_train_dataset, test_dataset, args)
     poison_result = test_supervised(poison_train_dataset, test_dataset, args)
     
+    args.output_dir = os.path.join(args.output_dir, args.dataset)
+    
     natural_result_path = f'{args.output_dir}/natural/'
     poison_result_path = f'{args.output_dir}/poison/'
     
@@ -142,8 +145,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:1')
-    parser.add_argument('--finetune_dataset', default='myLaion')
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet'])
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised')
     args = parser.parse_args()
