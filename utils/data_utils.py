@@ -97,7 +97,7 @@ def load_class_dataset(dataset_name, transform):
     if dataset_name == 'MNIST':
         train_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
         test_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
-    elif dataset_name == 'CIFAR10':
+    elif dataset_name == 'CIFAR10' or dataset_name == 'cifar10':
         train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
         test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
     elif dataset_name == 'CIFAR100':
