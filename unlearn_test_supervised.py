@@ -47,7 +47,7 @@ def test_supervised(trainDataset, testDataset, args):
     device = args.device
     # 正常训练
     # model = ResNet18()
-    model = torchvision_resnet18()
+    model = torchvision_resnet18(pretrained=True)
     
     model.fc = torch.nn.Linear(in_features=512, out_features=10)
     # if args.dataset == 'cifar10':
@@ -93,7 +93,10 @@ def test_supervised(trainDataset, testDataset, args):
             acc = (predicted == labels).sum().item()/labels.size(0)
             acc_meter.update(acc)
             loss_meter.update(loss.item())
-            pbar.set_description("Acc %.2f Loss: %.2f" % (acc_meter.avg*100, loss_meter.avg))
+            if args.poisoned:
+                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Poisoned" % (epoch, acc_meter.avg*100, loss_meter.avg))
+            else:
+                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Clean" % (epoch, acc_meter.avg*100, loss_meter.avg))
         scheduler.step()
         # Eval
         model.eval()
@@ -164,26 +167,36 @@ def main(args):
         transforms.ToTensor()
     ])
     
-    noise = torch.load(args.noise_path, map_location=args.device)
-    natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform)
-    poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, test_transform)
     
-    natural_result = test_supervised(natural_train_dataset, test_dataset, args)
-    poison_result = test_supervised(poison_train_dataset, test_dataset, args)
+    if args.poisoned:
+        noise = torch.load(args.noise_path, map_location=args.device)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, test_transform)
+        train_dataset = poison_train_dataset
+    else:
+        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform)
+        train_dataset = natural_train_dataset
+    
+    
+    result = test_supervised(train_dataset, test_dataset, args)
     
     args.output_dir = os.path.join(args.output_dir, args.dataset)
     
-    natural_result_path = f'{args.output_dir}/natural/'
-    poison_result_path = f'{args.output_dir}/poison/'
+    if args.poisoned:
+        poison_result_path = f'{args.output_dir}/poison/'
+        result_save_path = poison_result_path
+    else:
+        natural_result_path = f'{args.output_dir}/natural/'
+        result_save_path = natural_result_path
     
-    record_result(natural_result, natural_result_path)
-    record_result(poison_result, poison_result_path)
+    
+    record_result(result_save_path, natural_result_path)
     
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:3')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
+    parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised')
     args = parser.parse_args()
