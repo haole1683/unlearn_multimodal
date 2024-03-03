@@ -92,46 +92,47 @@ def load_dataset(name, bsz):
 def load_pair_dataset(name, bsz):
     return load_dataset(name, bsz)
 
-def load_class_dataset(dataset_name, transform):
+def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
     # zero-shot test dataset
     if dataset_name == 'MNIST':
-        train_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
-        test_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+        train_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'CIFAR10' or dataset_name == 'cifar10':
-        train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
-        test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+        train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'CIFAR100':
-        train_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
-        test_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+        train_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'ImageNet':
-        train_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='train', transform=transform)
-        test_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=transform)
+        train_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='train', transform=train_transform)
+        test_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=test_transform)
     elif dataset_name == 'STL10' or dataset_name == 'stl10':
-        train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=transform)
-        test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=transform)
+        train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
     elif dataset_name == 'GTSRB':
-        train_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=transform)
-        test_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=transform)
+        train_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
         prompt_template = "A photo of a traffic sign of {}."
     else:
         raise NotImplementedError
     
     return train_dataset, test_dataset
 
-def load_poison_dataset(dataset_name, noise, transform):
+def load_poison_dataset(dataset_name, noise, train_transform=None, test_transform=None):
     """load cifar-10 noise to its training dataset, specific class
 
     Args:
         dataset_name (str): name (cifar10)
         noise_path (Tensor): noise([5000,3,32,32])
-        transform (Transforms): transform
+        train_transform (Transforms): train_transform
+        test_transform (Transforms): test_transform
     """
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
-        unlearnable_train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=transform)
-        test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=transform)
+        unlearnable_train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
-        unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=transform)
-        test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=transform)
+        unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
         
     target_poison_class_name = "cat"
     
@@ -361,7 +362,30 @@ class ImageTextDatasetFromSupervisedDatasetPoison(Dataset):
             image = self.transform(image)
         return image, text
 
+# Dataset used for contrastive learning
+class ContrastivePairDataset(Dataset):
+    
+    def __init__(self, dataset_name,contrastive_transform=None ,train_transform=None, test_transform=None, target_transform=None) -> None:
+        super().__init__()
+        self.supervised_train_dataset, self.supervised_test_dataset = load_class_dataset(dataset_name, train_transform, test_transform)
+        self.contrastive_transform = contrastive_transform
+        self.target_transform = target_transform
+        
+    def __len__(self):
+        return len(self.supervised_train_dataset)
+    
+    def __getitem__(self, index):
+        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img = Image.fromarray(img)
 
+        if self.contrastive_transform is not None:
+            imgL = self.contrastive_transform(img)
+            imgR = self.contrastive_transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return imgL, imgR, target
 
 def create_sampler(datasets, shuffles, num_tasks, global_rank):
     samplers = []

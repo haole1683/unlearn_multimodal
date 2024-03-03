@@ -15,27 +15,11 @@ import argparse
 
 import json
 import os
+from pathlib import Path
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
-train_transform = transforms.Compose([
-    transforms.Resize(size=(96, 96)),
-    transforms.RandomCrop(size=(64, 64)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(degrees=(-10, 10)),
-    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
-    transforms.ColorJitter(brightness=0.3, hue=0.1),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                     std=[0.229, 0.224, 0.225])
-])
-test_transform = transforms.Compose([
-    transforms.Resize(size=(96, 96)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                     std=[0.229, 0.224, 0.225])
-])
 
 def test_supervised(trainDataset, testDataset, args):
     train_loader = DataLoader(dataset=trainDataset, batch_size=512,
@@ -109,6 +93,7 @@ def test_supervised(trainDataset, testDataset, args):
             images, labels = images.to(device), labels.to(device)
             with torch.no_grad():
                 logits = model(images)
+                loss_test = criterion(logits, labels)
                 _, predicted = torch.max(logits.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -119,17 +104,21 @@ def test_supervised(trainDataset, testDataset, args):
                     class_label = idx_to_class_dict[label.item()]
                     class_correct_dict[class_label]['correct_num'] += (predicted[j] == label).item()
                     class_correct_dict[class_label]['total_num'] += 1
-                    
+            
         for k,v in class_correct_dict.items():
             if v['total_num'] != 0:
                 class_correct_dict[k]['correct_rate'] = v['correct_num']/v['total_num']
                     
         acc = correct / total
         
+        # record result
         record = {}
         record['epoch'] = epoch
-        record['acc'] = acc
-        record['class_acc'] = class_correct_dict
+        record['train_acc'] = acc_meter.avg
+        record['train_loss'] = loss_meter.avg
+        record['test_acc'] = acc
+        record['test_loss'] = loss_test.item()
+        record['test_class_acc'] = class_correct_dict
         
         tqdm.write('Clean Accuracy %.2f' % (acc*100))
         tqdm.write('Class Accuracy: ')
@@ -142,38 +131,61 @@ def test_supervised(trainDataset, testDataset, args):
 
 def record_result(result, folder_path):
     import os
-    file_path = os.path.join(folder_path, "result.txt")
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    with open(file_path, 'w') as f:
-        for record in result:
-            f.write(f'Epoch: {record["epoch"]}\n')
-            f.write(f'Accuracy: {record["acc"]}\n')
-            f.write(f'Class Accuracy: \n')
-            for k,v in record['class_acc'].items():
-                f.write(f'{k}: {v["correct_num"]},{v["total_num"]}, {v["correct_rate"]:.2f} | ')
-            f.write('\n')
+    # file_path = os.path.join(folder_path, "result.txt")
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
+    # with open(file_path, 'w') as f:
+    #     for record in result:
+    #         f.write(f'Epoch: {record["epoch"]}\n')
+    #         f.write(f'Accuracy: {record["acc"]}\n')
+    #         f.write(f'Class Accuracy: \n')
+    #         for k,v in record['class_acc'].items():
+    #             f.write(f'{k}: {v["correct_num"]},{v["total_num"]}, {v["correct_rate"]:.2f} | ')
+    #         f.write('\n')
     
     # save as json
     file_path = os.path.join(folder_path, "result.json")
     with open(file_path, 'w') as f:
         json.dump(result, f)
-    
+
+def create_folder(path):
+    Path(path).mkdir(parents=True, exist_ok=True) 
 
 def main(args):
     
-    myTrans = transforms.Compose([
+    transform1 = transforms.Compose([
         # transforms.Resize((32,32)),
         transforms.ToTensor()
     ])
     
+    transform2 = transforms.Compose([
+        transforms.Resize(size=(96, 96)),
+        transforms.RandomCrop(size=(64, 64)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(degrees=(-10, 10)),
+        transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+        transforms.ColorJitter(brightness=0.3, hue=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                        std=[0.229, 0.224, 0.225])
+        ])
+    transform3 = transforms.Compose([
+        transforms.Resize(size=(96, 96)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                        std=[0.229, 0.224, 0.225])
+        ])
     
+    train_transform = transform1
+    test_transform = transform1
+        
+    create_folder(args.output_dir)
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, test_transform)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, train_transform, test_transform)
         train_dataset = poison_train_dataset
     else:
-        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform)
+        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform, test_transform)
         train_dataset = natural_train_dataset
     
     
@@ -187,9 +199,9 @@ def main(args):
     else:
         natural_result_path = f'{args.output_dir}/natural/'
         result_save_path = natural_result_path
-    
-    
-    record_result(result_save_path, natural_result_path)
+        
+    create_folder(result_save_path)
+    record_result(result, result_save_path)
     
 
 if __name__ == '__main__':
@@ -198,7 +210,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/temp/')
     args = parser.parse_args()
 
     main(args)
