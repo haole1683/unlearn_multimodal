@@ -6,15 +6,22 @@ def gen_perturbation(generator ,text_embedding, noise_shape, evaluate=False,args
     sec_emb = text_embedding
     if evaluate:
         generator.eval()
-    
-    if args:
-        norm_type = args.norm_type
-        epsilon = args.epsilon
-        device = args.device
-    else:
+
+    if not hasattr(args, 'norm_type'):
         norm_type = "l2"
+    else:
+        norm_type = args.norm_type
+    
+    if not hasattr(args, 'epsilon'):
         epsilon = 16
+    else:
+        epsilon = args.epsilon
+    
+    if not hasattr(args, 'device'):
         device = 'cuda:0'
+    else:
+        device = args.device
+        
     noise = torch.randn(batch_size, 100).to(device)
     if evaluate:
         with torch.no_grad():

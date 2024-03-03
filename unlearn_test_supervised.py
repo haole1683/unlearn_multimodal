@@ -2,6 +2,8 @@ import torch
 
 from utils.ue_util import AverageMeter
 from models.ResNet import ResNet18
+from torchvision.models import resnet18 as torchvision_resnet18
+from torchvision import transforms
 from torch.utils.data import (DataLoader)
 import torch
 from utils.data_utils import (
@@ -17,23 +19,58 @@ import os
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
+train_transform = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.RandomCrop(size=(64, 64)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(degrees=(-10, 10)),
+    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+    transforms.ColorJitter(brightness=0.3, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                     std=[0.229, 0.224, 0.225])
+])
+test_transform = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                     std=[0.229, 0.224, 0.225])
+])
+
 def test_supervised(trainDataset, testDataset, args):
     train_loader = DataLoader(dataset=trainDataset, batch_size=512,
-                                    shuffle=False, pin_memory=True,
+                                    shuffle=True, pin_memory=True,
                                     drop_last=False, num_workers=12)
     test_loader = DataLoader(dataset=testDataset, batch_size=512,
                                     shuffle=False, pin_memory=True,
                                     drop_last=False, num_workers=12)
     device = args.device
     # 正常训练
-    model = ResNet18()
+    # model = ResNet18()
+    model = torchvision_resnet18()
+    
+    model.fc = torch.nn.Linear(in_features=512, out_features=10)
+    # if args.dataset == 'cifar10':
+    #     model.linear = torch.nn.Linear(512, 10)
+    # elif args.dataset == 'stl10':
+    #     model.linear = torch.nn.Linear(4608, 10)
+    # else:
+    #     model.linear = torch.nn.Linear(512, 10)
+    
     model = model.to(device)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(params=model.parameters(), lr=0.1, weight_decay=0.0005, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0)
 
     result = []
-    class_to_idx_dict = trainDataset.class_to_idx
+    
+    if hasattr(trainDataset, 'class_to_idx'):
+        class_to_idx_dict = trainDataset.class_to_idx
+    else:
+        class_to_idx_dict = {
+            "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+        }
+        
     idx_to_class_dict = dict(zip(class_to_idx_dict.values(), class_to_idx_dict.keys()))
     
     for epoch in range(40):
@@ -123,12 +160,13 @@ def record_result(result, folder_path):
 def main(args):
     
     myTrans = transforms.Compose([
+        # transforms.Resize((32,32)),
         transforms.ToTensor()
     ])
     
     noise = torch.load(args.noise_path, map_location=args.device)
-    natural_train_dataset, test_dataset = load_class_dataset(args.dataset, myTrans)
-    poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, myTrans)
+    natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform)
+    poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, test_transform)
     
     natural_result = test_supervised(natural_train_dataset, test_dataset, args)
     poison_result = test_supervised(poison_train_dataset, test_dataset, args)
@@ -144,7 +182,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:1')
+    parser.add_argument('--device', default='cuda:3')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised')

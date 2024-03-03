@@ -146,16 +146,21 @@ def load_poison_dataset(dataset_name, noise, transform):
         train_lables = unlearnable_train_dataset.labels
 
     image_shape = unlearnable_train_dataset.data[0].shape
+    
+    # print("The shape of noise is: ", noise.shape)
+    # print("The shape of image is: ", image_shape)
     if noise.shape[1:] != image_shape:
         raise ValueError("The shape of noise is not equal to the shape of image.")
         
-    
-    perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
+    # perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
+    perturb_noise = noise.mul(255).clamp_(0, 255).to('cpu').numpy()
     unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
     noise_idx = 0
     for i in range(len(unlearnable_train_dataset)):
         label = train_lables[i]
         if label == target_label:  # poison the specific class 'cat'
+            # print(perturb_noise[noise_idx].shape)
+            # print(unlearnable_train_dataset.data[i].shape)
             unlearnable_train_dataset.data[i] += perturb_noise[noise_idx]
             unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
             noise_idx += 1

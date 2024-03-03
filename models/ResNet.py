@@ -110,9 +110,14 @@ def ResNet152(num_classes=10):
 
 
 def test():
-    net = ResNet18()
+    net = ResNet34()
     y = net(torch.randn(1, 3, 32, 32))
     print(y.size())
+    net.linear = nn.Linear(4608, 10)
+    y = net(torch.randn(1, 3, 96, 96))
+    print(y.size())
+
+# test()
 
 
 class BasicConv2d(nn.Module):
