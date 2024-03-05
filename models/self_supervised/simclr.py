@@ -28,7 +28,6 @@ class SimCLRStage1(nn.Module):
         out = self.g(feature)
         return F.normalize(feature, dim=-1), F.normalize(out, dim=-1)
 
-
 # stage two ,supervised learning
 class SimCLRStage2(torch.nn.Module):
     def __init__(self, num_class):
@@ -40,6 +39,12 @@ class SimCLRStage2(torch.nn.Module):
 
         for param in self.f.parameters():
             param.requires_grad = False
+
+    def forward(self, x):
+        x = self.f(x)
+        feature = torch.flatten(x, start_dim=1)
+        out = self.fc(feature)
+        return out
 
 class Loss(torch.nn.Module):
     def __init__(self):

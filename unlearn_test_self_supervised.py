@@ -10,7 +10,8 @@ from models.self_supervised.simclr import (
     SimCLRStage1, SimCLRStage2, Loss
 )
 from utils.data_utils import (
-    ContrastivePairDataset, load_pair_dataset, load_class_dataset,
+    ContrastivePairDataset, ContrastivePairPoisonDataset,
+    load_pair_dataset, load_class_dataset,
     create_simple_loader,
     contrastive_train_transform, contrastive_test_transform
 )
@@ -24,7 +25,7 @@ def train_pretrain(train_dataset, args):
     # 每次训练计算图改动较小使用，在开始前选取较优的基础算法（比如选择一种当前高效的卷积算法）
     torch.backends.cudnn.benchmark = True
 
-    batch_size = args.batch_size
+    batch_size = args.pretrain_batch_size
     save_path = args.stage1_path
     max_epoch = args.pretrain_epoch
     
@@ -56,7 +57,7 @@ def train_pretrain(train_dataset, args):
         with open(os.path.join(save_path, "stage1_loss.txt"), "a") as f:
             f.write(str(total_loss/len(train_dataset)*batch_size) + " ")
 
-        if epoch % 5==0:
+        if epoch % 10==0:
             torch.save(model.state_dict(), os.path.join(save_path, 'model_stage1_epoch' + str(epoch) + '.pth'))
 
 
@@ -69,12 +70,13 @@ def train_finetune(args):
     print("current device:", device)
     save_path = args.stage2_path
     max_epoch = args.finetune_epoch
+    batch_size = args.finetune_batch_size
 
     # load dataset for train and eval
     train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=contrastive_train_transform, test_transform=contrastive_test_transform)
     train_loader, test_loader = create_simple_loader(train_dataset), create_simple_loader(test_dataset)
 
-    pretrain_path = join_path(args.stage1_path, "model" + str(max_epoch) + ".pth")
+    pretrain_path = join_path(args.stage1_path, "model_stage1_epoch" + str(max_epoch) + ".pth")
 
     model = SimCLRStage2(num_class=len(train_dataset.classes)).to(device)
     model.load_state_dict(torch.load(pretrain_path, map_location='cpu'),strict=False)
@@ -95,9 +97,9 @@ def train_finetune(args):
 
             total_loss += loss.item()
 
-        print("epoch",epoch,"loss:", total_loss / len(train_dataset)*args.batch_size)
+        print("epoch",epoch,"loss:", total_loss / len(train_dataset)* batch_size)
         with open(os.path.join(save_path, "stage2_loss.txt"), "a") as f:
-            f.write(str(total_loss / len(train_dataset)*args.batch_size) + " ")
+            f.write(str(total_loss / len(train_dataset)* batch_size) + " ")
 
         if epoch % 5==0:
             torch.save(model.state_dict(), os.path.join(save_path, 'model_stage2_epoch' + str(epoch) + '.pth'))
@@ -130,15 +132,22 @@ def train_finetune(args):
 
 
 def main(args):
-    train_dataset = ContrastivePairDataset(args.dataset, contrastive_transform = contrastive_train_transform)
     
-    stage_result_path = f'{args.output_dir}/stage1/'
-    create_folder(stage_result_path)
-    stage_result_path = f'{args.output_dir}/stage2/'
-    create_folder(stage_result_path)
+    if args.poisoned:
+        train_dataset = ContrastivePairPoisonDataset(args.dataset, contrastive_transform = contrastive_train_transform, noise_path = args.noise_path)
+        args.output_dir = join_path(args.output_dir, 'poisoned')
+    else:
+        train_dataset = ContrastivePairDataset(args.dataset, contrastive_transform = contrastive_train_transform)
+        args.output_dir = join_path(args.output_dir, 'natural')
     
-    args.stage1_path = stage_result_path
-    args.stage2_path = stage_result_path
+    
+    stage1_result_path = f'{args.output_dir}/stage1/'
+    create_folder(stage1_result_path)
+    stage2_result_path = f'{args.output_dir}/stage2/'
+    create_folder(stage2_result_path)
+    
+    args.stage1_path = stage1_result_path
+    args.stage2_path = stage2_result_path
     
     train_pretrain(train_dataset, args)
     train_finetune(args)
@@ -154,7 +163,8 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_self_supervised')
     
     # training config
-    parser.add_argument('--batch_size', default=400, type=int)
+    parser.add_argument('--pretrain_batch_size', default=400, type=int)
+    parser.add_argument('--finetune_batch_size', default=400, type=int)
     parser.add_argument('--pretrain_epoch', default=1000, type=int)
     parser.add_argument('--finetune_epoch', default=200, type=int)
     args = parser.parse_args()

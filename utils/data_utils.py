@@ -386,6 +386,30 @@ class ContrastivePairDataset(Dataset):
             target = self.target_transform(target)
 
         return imgL, imgR, target
+# Dataset poisoning for contrastive learning
+class ContrastivePairPoisonDataset(Dataset):
+    
+    def __init__(self, dataset_name, noise, contrastive_transform=None ,train_transform=None, test_transform=None, target_transform=None) -> None:
+        super().__init__()
+        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, noise, train_transform, test_transform)
+        self.contrastive_transform = contrastive_transform
+        self.target_transform = target_transform
+        
+    def __len__(self):
+        return len(self.supervised_train_dataset)
+    
+    def __getitem__(self, index):
+        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img = Image.fromarray(img)
+
+        if self.contrastive_transform is not None:
+            imgL = self.contrastive_transform(img)
+            imgR = self.contrastive_transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return imgL, imgR, target
 
 def create_sampler(datasets, shuffles, num_tasks, global_rank):
     samplers = []
