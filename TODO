@@ -13,3 +13,6 @@ STL-10已经是从ImageNet中提取的10个类别了。
 关于对比学习的代码位置：
 Contrastive Learning代码仓库: /remote-home/songtianwei/research/contrastive_poisoning/contrastive-poisoning
 Transferable Unlearnable Examples: /remote-home/songtianwei/research/TUE/TUE
+
+
+文本指导的对抗样本的生成调研。。

@@ -44,7 +44,19 @@ def save_noise(noise, path):
     noise = noise.detach().cpu()
     torch.save(noise, path)
 
+def limit_noise(noise, norm_type="l2", epsilon=16, device="cuda:0", noise_shape=[3,32,32]):
+    delta_im = noise
     
+    if norm_type == "l2":
+        temp = torch.norm(delta_im.view(delta_im.shape[0], -1), dim=1).view(-1, 1, 1, 1)
+        delta_im = delta_im * epsilon / temp
+    elif norm_type == "linf":
+        delta_im = torch.clamp(delta_im, -epsilon / 255., epsilon / 255)  # torch.Size([16, 3, 256, 256])
+
+    delta_im = delta_im.to(device)
+    delta_im = F.interpolate(delta_im, (noise_shape[-2], noise_shape[-1]))
+    
+    return delta_im
 
     
     

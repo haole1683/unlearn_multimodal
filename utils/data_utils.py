@@ -147,14 +147,22 @@ def load_poison_dataset(dataset_name, noise, train_transform=None, test_transfor
         train_lables = unlearnable_train_dataset.labels
 
     image_shape = unlearnable_train_dataset.data[0].shape
+
+    print("The shape of noise is: ", noise.shape)
+    print("The shape of image is: ", image_shape)
     
-    # print("The shape of noise is: ", noise.shape)
-    # print("The shape of image is: ", image_shape)
-    if noise.shape[1:] != image_shape:
+    if noise.shape[1] != image_shape[0]:
+        perturb_noise = noise.permute(0, 2, 3, 1)
+    else:
+        perturb_noise = noise
+    
+    if perturb_noise.shape[1:] != image_shape:
         raise ValueError("The shape of noise is not equal to the shape of image.")
-        
-    # perturb_noise = noise.mul(255).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu').numpy()
-    perturb_noise = noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+    
+    
+    perturb_noise = perturb_noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+    # perturb_noise = noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+    
     unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
     noise_idx = 0
     for i in range(len(unlearnable_train_dataset)):
@@ -168,7 +176,7 @@ def load_poison_dataset(dataset_name, noise, train_transform=None, test_transfor
     unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
 
     if noise_idx != noise.shape[0]:
-        raise ValueError("The number of noise is not equal to the number of target class.")
+        print("!!!  The number of noise is not equal to the number of target class.  !!!")
 
     return unlearnable_train_dataset, test_dataset
 

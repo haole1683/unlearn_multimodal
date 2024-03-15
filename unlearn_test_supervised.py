@@ -6,9 +6,14 @@ from torchvision.models import resnet18 as torchvision_resnet18
 from torchvision import transforms
 from torch.utils.data import (DataLoader)
 import torch
+
 from utils.data_utils import (
     load_poison_dataset, load_class_dataset
 )
+from utils.noise_utils import (
+    limit_noise
+)
+
 from tqdm import tqdm
 import torchvision.transforms as transforms
 import argparse
@@ -182,6 +187,13 @@ def main(args):
     create_folder(args.output_dir)
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
+        
+        # test fix noise 
+        tgt_shape = noise[0].shape
+        noise = torch.randn_like(noise[0])
+        noise = torch.stack([noise] * 5000)
+        noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
+        
         poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, train_transform, test_transform)
         train_dataset = poison_train_dataset
     else:
@@ -195,6 +207,7 @@ def main(args):
     
     if args.poisoned:
         poison_result_path = f'{args.output_dir}/poison/'
+        poison_result_path = f'{args.output_dir}/test_fix_noise_poison/'
         result_save_path = poison_result_path
     else:
         natural_result_path = f'{args.output_dir}/natural/'
@@ -210,7 +223,11 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/temp/')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/')
+    
+    # used for test
+    parser.add_argument('--test', action='store_true')
+    parser.add_argument('--test_folder', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/temp/')
     args = parser.parse_args()
 
     main(args)

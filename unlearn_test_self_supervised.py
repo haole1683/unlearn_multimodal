@@ -69,7 +69,7 @@ def train_finetune(args):
     device = torch.device(args.device)  
     print("current device:", device)
     save_path = args.stage2_path
-    max_epoch = args.finetune_epoch
+    max_epoch = args.pretrain_epoch
     batch_size = args.finetune_batch_size
 
     # load dataset for train and eval
@@ -134,7 +134,8 @@ def train_finetune(args):
 def main(args):
     
     if args.poisoned:
-        train_dataset = ContrastivePairPoisonDataset(args.dataset, contrastive_transform = contrastive_train_transform, noise_path = args.noise_path)
+        noise = torch.load(args.noise_path, map_location=args.device)
+        train_dataset = ContrastivePairPoisonDataset(args.dataset, noise, contrastive_transform = contrastive_train_transform)
         args.output_dir = join_path(args.output_dir, 'poisoned')
     else:
         train_dataset = ContrastivePairDataset(args.dataset, contrastive_transform = contrastive_train_transform)
@@ -149,7 +150,7 @@ def main(args):
     args.stage1_path = stage1_result_path
     args.stage2_path = stage2_result_path
     
-    train_pretrain(train_dataset, args)
+    # train_pretrain(train_dataset, args)
     train_finetune(args)
     
     pass
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:3')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
+    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_self_supervised')
     
     # training config
