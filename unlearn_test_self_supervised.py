@@ -69,7 +69,7 @@ def train_finetune(args):
     device = torch.device(args.device)  
     print("current device:", device)
     save_path = args.stage2_path
-    max_epoch = args.pretrain_epoch
+    max_epoch = args.finetune_epoch
     batch_size = args.finetune_batch_size
 
     # load dataset for train and eval
@@ -144,25 +144,32 @@ def main(args):
     
     stage1_result_path = f'{args.output_dir}/stage1/'
     create_folder(stage1_result_path)
-    stage2_result_path = f'{args.output_dir}/stage2/'
+    stage2_result_path = f'{args.output_dir}/stage2_new/'
     create_folder(stage2_result_path)
     
     args.stage1_path = stage1_result_path
     args.stage2_path = stage2_result_path
     
-    # train_pretrain(train_dataset, args)
-    train_finetune(args)
+    if args.stage == 'stage1' or args.stage == 'all':
+        train_pretrain(train_dataset, args)
+    if args.stage == 'stage2' or args.stage == 'all':
+        train_finetune(args)
     
     pass
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:3')
+    parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_self_supervised')
     
+    # training settings
+    parser.add_argument('--distributed', action='store_true')   # 采用多卡训练
+    # training stage
+    parser.add_argument('--stage', default='stage2', choices=['all','stage1','stage2'])
+
     # training config
     parser.add_argument('--pretrain_batch_size', default=400, type=int)
     parser.add_argument('--finetune_batch_size', default=400, type=int)

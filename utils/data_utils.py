@@ -459,11 +459,15 @@ def create_my_loader(trainDataset, testDataset):
                                     drop_last=False, num_workers=12)
     return clean_train_loader, clean_test_loader
 
-def create_simple_loader(dataset):
-    loader = DataLoader(dataset, batch_size=256,
-                                shuffle=True, pin_memory=True,
-                                drop_last=False, num_workers=12)
+def create_simple_loader(dataset, args=None):
+    if args is None:
+        loader = DataLoader(dataset, batch_size=256,
+                                    shuffle=True, pin_memory=True,
+                                    drop_last=False, num_workers=12)
+    else:
+        loader = DataLoader(a)
     return loader
+
 
 from torchvision import transforms
 
