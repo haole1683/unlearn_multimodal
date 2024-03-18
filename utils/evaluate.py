@@ -1153,3 +1153,51 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
     print(f"Cat accuracy: {cat_correct/cat_total}")
     print(f"Ship accuracy: {ship_correct/ship_total}")
     return top1, top5
+
+
+def cifar10_evaluate(model, test_loader, device, criterion, acc_meter, loss_meter, result, epoch, class_to_idx_dict, idx_to_class_dict):
+    
+    model.eval()
+    correct, total = 0, 0
+    correct_dict = {}
+    
+    class_correct_dict = {k:{'correct_num':0, 'total_num':0, 'correct_rate':0} for k,v in class_to_idx_dict.items()}
+
+    for i, (images, labels) in enumerate(test_loader):
+        images, labels = images.to(device), labels.to(device)
+        with torch.no_grad():
+            logits = model(images)
+            loss_test = criterion(logits, labels)
+            _, predicted = torch.max(logits.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+            # 统计class_correct_dict正确的类别个数
+            for j in range(labels.size(0)):
+                label = labels[j]
+                class_label = idx_to_class_dict[label.item()]
+                class_correct_dict[class_label]['correct_num'] += (predicted[j] == label).item()
+                class_correct_dict[class_label]['total_num'] += 1
+        
+    for k,v in class_correct_dict.items():
+        if v['total_num'] != 0:
+            class_correct_dict[k]['correct_rate'] = v['correct_num']/v['total_num']
+                
+    acc = correct / total
+    
+    # record result
+    record = {}
+    record['epoch'] = epoch
+    record['train_acc'] = acc_meter.avg
+    record['train_loss'] = loss_meter.avg
+    record['test_acc'] = acc
+    record['test_loss'] = loss_test.item()
+    record['test_class_acc'] = class_correct_dict
+    
+    tqdm.write('Clean Accuracy %.2f' % (acc*100))
+    tqdm.write('Class Accuracy: ')
+    for k,v in class_correct_dict.items():
+        tqdm.write(f'{k}: {v["correct_rate"]:.2f}', end=' ')
+    tqdm.write('\n')
+    
+    result.append(record)

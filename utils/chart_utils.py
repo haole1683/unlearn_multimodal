@@ -8,8 +8,8 @@ def draw_chart(json_path):
         data = json.load(f)
     epochs = len(data)
     x = [i for i in range(epochs)]
-    y = [data[i]['acc'] for i in range(epochs)]
-    y_cat = [data[i]['class_acc']['cat']['correct_rate'] for i in range(epochs)]
+    y = [data[i]['test_acc'] for i in range(epochs)]
+    y_cat = [data[i]['test_class_acc']['cat']['correct_rate'] for i in range(epochs)]
 
     plt.plot(x, y, lw=2, label='Test Accuray')
     plt.plot(x, y_cat, lw=2, label='Test Cat Accuary')

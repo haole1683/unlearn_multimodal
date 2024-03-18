@@ -36,8 +36,11 @@ def test_supervised(trainDataset, testDataset, args):
     device = args.device
     # 正常训练
     # model = ResNet18()
-    model = torchvision_resnet18(pretrained=True)
-    
+    if args.pretrained:
+        model = torchvision_resnet18(pretrained=True)
+    else:
+        model = torchvision_resnet18(pretrained=False)
+        
     model.fc = torch.nn.Linear(in_features=512, out_features=10)
     # if args.dataset == 'cifar10':
     #     model.linear = torch.nn.Linear(512, 10)
@@ -90,7 +93,6 @@ def test_supervised(trainDataset, testDataset, args):
         # Eval
         model.eval()
         correct, total = 0, 0
-        correct_dict = {}
         
         class_correct_dict = {k:{'correct_num':0, 'total_num':0, 'correct_rate':0} for k,v in class_to_idx_dict.items()}
 
@@ -189,11 +191,12 @@ def main(args):
         noise = torch.load(args.noise_path, map_location=args.device)
         
         # test fix noise 
-        tgt_shape = noise[0].shape
-        noise = torch.randn_like(noise[0])
-        noise = torch.stack([noise] * 5000)
-        noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
-        
+        if args.fix_noise:
+            tgt_shape = noise[0].shape
+            noise = torch.randn_like(noise[0])
+            noise = torch.stack([noise] * 5000)
+            noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
+            
         poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, train_transform, test_transform)
         train_dataset = poison_train_dataset
     else:
@@ -207,7 +210,7 @@ def main(args):
     
     if args.poisoned:
         poison_result_path = f'{args.output_dir}/poison/'
-        poison_result_path = f'{args.output_dir}/test_fix_noise_poison/'
+        # poison_result_path = f'{args.output_dir}/test_fix_noise_poison/'
         result_save_path = poison_result_path
     else:
         natural_result_path = f'{args.output_dir}/natural/'
@@ -223,7 +226,13 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/not_pretrained')
+    
+    # for model(pretrained or not)
+    parser.add_argument('--pretrained', action='store_true')
+    
+    # fix noise
+    parser.add_argument('--fix_noise', action='store_true')
     
     # used for test
     parser.add_argument('--test', action='store_true')
