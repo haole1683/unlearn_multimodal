@@ -49,7 +49,7 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     generator.load_state_dict(torch.load(generator_path))
     generator.eval()
     
-    tgt_class = 'truck'
+    tgt_class = 'cat'
     def gen1():
         test_dataset = args.dataset
         

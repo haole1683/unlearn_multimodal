@@ -161,6 +161,7 @@ def create_folder(path):
 def main(args):
     
     transform1 = transforms.Compose([
+        # NOTE 这里强制改成32 * 32了！！！
         # transforms.Resize((32,32)),
         transforms.ToTensor()
     ])
@@ -197,10 +198,10 @@ def main(args):
             noise = torch.stack([noise] * 5000)
             noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
             
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, train_transform, test_transform)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name='cat', train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
     else:
-        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform, test_transform)
+        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     
     
@@ -225,8 +226,8 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:3')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise_RN50.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/not_pretrained')
+    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen1_5000-3-32-32_cat_RN50.pt')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/cifar10-pretrained')
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')

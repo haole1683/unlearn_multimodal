@@ -118,7 +118,7 @@ def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
     
     return train_dataset, test_dataset
 
-def load_poison_dataset(dataset_name, noise, train_transform=None, test_transform=None):
+def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', train_transform=None, test_transform=None):
     """load cifar-10 noise to its training dataset, specific class
 
     Args:
@@ -133,8 +133,6 @@ def load_poison_dataset(dataset_name, noise, train_transform=None, test_transfor
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
         unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
         test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
-        
-    target_poison_class_name = "cat"
     
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
         target_label = unlearnable_train_dataset.class_to_idx[target_poison_class_name]
@@ -156,6 +154,8 @@ def load_poison_dataset(dataset_name, noise, train_transform=None, test_transfor
     else:
         perturb_noise = noise
     
+    print("!!!")
+    print(perturb_noise.shape, image_shape)
     if perturb_noise.shape[1:] != image_shape:
         raise ValueError("The shape of noise is not equal to the shape of image.")
     
