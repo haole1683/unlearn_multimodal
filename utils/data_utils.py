@@ -188,7 +188,7 @@ class jsonDataset(Dataset):
         self.contain_index = contain_index
     def __getitem__(self,idx):
         sample = self.json_data[idx]
-        text, img_path, index = sample['caption'], sample['image_path'], sample['index']
+        text, img_path = sample['caption'], sample['image_path']
         img = Image.open(img_path)
         img = img.convert('RGB')
         if self.text_transform:
@@ -196,7 +196,7 @@ class jsonDataset(Dataset):
         if self.img_transform:
             img = self.img_transform(img)
         if self.contain_index:
-            return img, text, index
+            return img, text, sample['index']
         else:
             return img, text
     def __len__(self):
@@ -465,7 +465,8 @@ def create_simple_loader(dataset, args=None):
                                     shuffle=True, pin_memory=True,
                                     drop_last=False, num_workers=12)
     else:
-        loader = DataLoader(a)
+        # loader = DataLoader(a)
+        pass
     return loader
 
 

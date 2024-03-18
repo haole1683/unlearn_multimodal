@@ -17,30 +17,12 @@ from utils.data_utils import (
     contrastive_train_transform, contrastive_test_transform
 )
 from utils.os_utils import (
-    create_folder, join_path
+    create_folder, join_path, record_result
 )
 from utils.ue_util import AverageMeter
 from tqdm import tqdm
 import json
 
-def record_result(result, folder_path):
-    import os
-    # file_path = os.path.join(folder_path, "result.txt")
-    # if not os.path.exists(folder_path):
-    #     os.makedirs(folder_path)
-    # with open(file_path, 'w') as f:
-    #     for record in result:
-    #         f.write(f'Epoch: {record["epoch"]}\n')
-    #         f.write(f'Accuracy: {record["acc"]}\n')
-    #         f.write(f'Class Accuracy: \n')
-    #         for k,v in record['class_acc'].items():
-    #             f.write(f'{k}: {v["correct_num"]},{v["total_num"]}, {v["correct_rate"]:.2f} | ')
-    #         f.write('\n')
-    
-    # save as json
-    file_path = os.path.join(folder_path, "result.json")
-    with open(file_path, 'w') as f:
-        json.dump(result, f)
 
 # stage 1: pretrain
 def train_pretrain(train_dataset, args):

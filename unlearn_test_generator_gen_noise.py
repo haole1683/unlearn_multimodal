@@ -8,12 +8,13 @@ from utils.noise_utils import gen_perturbation
 from utils.clip_util import prompt_templates
 from utils.noise_utils import save_noise
 from utils.data_utils import jsonDataset
+from utils.os_utils import add_index_to_json_file
 
 from torch.utils.data import Dataset, DataLoader
 
 from models.model_gan_generator import NetG
 from tqdm import tqdm
-
+import os
 import argparse
 
 myTrans = transforms.Compose([
@@ -48,15 +49,17 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     generator.load_state_dict(torch.load(generator_path))
     generator.eval()
     
-    tgt_class = 'cat'
+    tgt_class = 'truck'
     def gen1():
         test_dataset = args.dataset
         
         if test_dataset == 'cifar10':
-            noise_shape = (32,3,32,32) # for cifar-10
+            gen_batch = 32
+            noise_shape = (gen_batch,3,32,32) # for cifar-10
             noise_count = 5000
         elif test_dataset == 'stl10':
-            noise_shape = (16,3,96,96)
+            gen_batch = 16
+            noise_shape = (gen_batch,3,96,96)
             noise_count = 500
         
         print(f"Generating noise for tgt class in {args.dataset} tgt class {noise_shape} image")
@@ -79,7 +82,9 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         noise1 = torch.concat(noise_list)
         noise1 = noise1[:noise_count]
     
-        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/{}_noise_{}.pt".format(tgt_class,clip_version)
+        noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
+
+        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen1_{}_{}_{}.pt".format(noise_shape_str,tgt_class,clip_version)
         torch.save(noise1.detach().cpu(), tgt_save_path)
     
     
@@ -87,8 +92,12 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         # Generator noise for tgt_class class dataset image-pair dataset
         print(f"Generating noise for {tgt_class} class in {tgt_class} class image-pair dataset [3,224,224] image")
         
-        json_tgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}.json"
-        json_notgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-no-{tgt_class}.json"
+        json_tgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}-with-index.json"
+            
+        if not os.path.exists(json_tgt_path):
+            # add index for the json file
+            json_tgt_no_index_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}.json"
+            add_index_to_json_file(json_tgt_no_index_path)
             
         myTrans = transforms.Compose([
             transforms.Resize((224,224)),
@@ -96,11 +105,8 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         ])
 
         tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans, contain_index=True)
-        otherDs = jsonDataset(json_notgt_path, img_transform = myTrans)
-
         myDataloader = DataLoader(tgtClassDs, batch_size=16, shuffle=True,drop_last=True)
-        otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
-        
+
         dataset_len = len(tgtClassDs)
         noises2 = torch.rand(dataset_len,3,224,224).to(args.device)
         noise_shape = (16,3,224,224)
@@ -110,11 +116,13 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
             text = tokenizer(text, truncate=True).to(args.device)
             text_embedding = model.encode_text(text)
             with torch.no_grad():
-                delta_im = gen_perturbation(generator, text_embedding, noise_shape,evaluate=True, args=None)
+                delta_im = gen_perturbation(generator, text_embedding, noise_shape,evaluate=True, args=args)
             index = index % dataset_len
             noises2[index] = delta_im
-
-        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/{}_noise_ori_{}.pt".format(tgt_class, clip_version)
+            
+        noise_count = len(tgtClassDs)
+        noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
+        tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen2_{}_{}_{}.pt".format(noise_shape_str,tgt_class,clip_version)
         torch.save(noises2.detach().cpu(), tgt_save_path)    
 
     gen1()
