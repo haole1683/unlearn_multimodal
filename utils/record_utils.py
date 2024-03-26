@@ -2,6 +2,28 @@ import csv
 import os
 import time
 import torch
+import json
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+        self.max = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+        self.max = max(self.max, val)
+
 
 def write_csv(result_dict, args):
     csv_path = "/remote-home/songtianwei/research/unlearn_multimodal/record/record.csv"
@@ -44,3 +66,61 @@ def record_result(args, result):
     with open(csv_path, "a") as f:
         f.write(f"{gen_dataset}, {gen_clip_model}, {gen_epoch},{gen_clip_loss}, {checkpoint_path},{dataset}, {model}, {attack_type}, {norm_type}, {epsilon}, {top1}, {top5}\n")
     print('done!')
+    
+
+def record_result_supervised(result, folder_path):
+    import os
+    # file_path = os.path.join(folder_path, "result.txt")
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
+    # with open(file_path, 'w') as f:
+    #     for record in result:
+    #         f.write(f'Epoch: {record["epoch"]}\n')
+    #         f.write(f'Accuracy: {record["acc"]}\n')
+    #         f.write(f'Class Accuracy: \n')
+    #         for k,v in record['class_acc'].items():
+    #             f.write(f'{k}: {v["correct_num"]},{v["total_num"]}, {v["correct_rate"]:.2f} | ')
+    #         f.write('\n')
+    
+    # save as json
+    file_path = os.path.join(folder_path, "result.json")
+    with open(file_path, 'w') as f:
+        json.dump(result, f)
+        
+    
+class RecordSupervised(object):
+    """record the supervised result
+
+    Args:
+        object (_type_): _description_
+    """
+    def __init__(self):
+        self.result = []
+
+    def add_one_record(self, epoch, acc_meter_train, loss_meter_train,acc_meter_test, loss_meter_test, class_correct_dict):
+        record = {}
+        record['epoch'] = epoch
+        record['train_acc'] = acc_meter_train.avg
+        record['train_loss'] = loss_meter_train.avg
+        record['test_acc'] = acc_meter_test.avg
+        record['test_loss'] = loss_meter_test.avg
+        record['test_class_acc'] = class_correct_dict
+        
+        self.result.append(record)
+        
+    def add_one_record_value(self, epoch, acc_train, loss_train,acc_test, loss_test, class_correct_dict):
+        record = {}
+        record['epoch'] = epoch
+        record['train_acc'] = acc_train
+        record['train_loss'] = loss_train
+        record['test_acc'] = acc_test
+        record['test_loss'] = loss_test
+        record['test_class_acc'] = class_correct_dict
+        
+        self.result.append(record)
+        
+    def save_result(self, path):
+        pass
+    
+    def get_result(self):
+        return self.result

@@ -1,6 +1,5 @@
 import torch
 
-from utils.ue_util import AverageMeter
 from models.ResNet import ResNet18
 from torchvision.models import resnet18 as torchvision_resnet18
 from torchvision import transforms
@@ -13,12 +12,18 @@ from utils.data_utils import (
 from utils.noise_utils import (
     limit_noise
 )
+from utils.record_utils import (
+    record_result_supervised, AverageMeter,
+    RecordSupervised
+)
+from utils.os_utils import (
+    create_folder
+)
 
 from tqdm import tqdm
 import torchvision.transforms as transforms
 import argparse
 
-import json
 import os
 from pathlib import Path
 
@@ -53,8 +58,6 @@ def test_supervised(trainDataset, testDataset, args):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(params=model.parameters(), lr=0.1, weight_decay=0.0005, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0)
-
-    result = []
     
     if hasattr(trainDataset, 'class_to_idx'):
         class_to_idx_dict = trainDataset.class_to_idx
@@ -64,12 +67,15 @@ def test_supervised(trainDataset, testDataset, args):
         }
         
     idx_to_class_dict = dict(zip(class_to_idx_dict.values(), class_to_idx_dict.keys()))
+    myRecord = RecordSupervised()
     
     for epoch in range(40):
-        # Train
+        # Training Stage
         model.train()
-        acc_meter = AverageMeter()
-        loss_meter = AverageMeter()
+        
+        acc_meter_train = AverageMeter()
+        loss_meter_train = AverageMeter()
+        
         pbar = tqdm(train_loader, total=len(train_loader))
         for images, labels in pbar:
             images, labels = images.to(device), labels.to(device)
@@ -83,16 +89,20 @@ def test_supervised(trainDataset, testDataset, args):
             
             _, predicted = torch.max(logits.data, 1)
             acc = (predicted == labels).sum().item()/labels.size(0)
-            acc_meter.update(acc)
-            loss_meter.update(loss.item())
+            
+            acc_meter_train.update(acc)
+            loss_meter_train.update(loss.item())
+            
             if args.poisoned:
-                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Poisoned" % (epoch, acc_meter.avg*100, loss_meter.avg))
+                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Poisoned" % (epoch, acc_meter_train.avg*100, loss_meter_train.avg))
             else:
-                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Clean" % (epoch, acc_meter.avg*100, loss_meter.avg))
+                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Clean" % (epoch, loss_meter_train.avg*100, loss_meter_train.avg))
+        
         scheduler.step()
-        # Eval
+        # Eval Stage
         model.eval()
-        correct, total = 0, 0
+        acc_meter_test = AverageMeter()
+        loss_meter_test = AverageMeter()
         
         class_correct_dict = {k:{'correct_num':0, 'total_num':0, 'correct_rate':0} for k,v in class_to_idx_dict.items()}
 
@@ -100,11 +110,14 @@ def test_supervised(trainDataset, testDataset, args):
             images, labels = images.to(device), labels.to(device)
             with torch.no_grad():
                 logits = model(images)
-                loss_test = criterion(logits, labels)
+                loss = criterion(logits, labels)
+                
                 _, predicted = torch.max(logits.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
+                acc = (predicted == labels).sum().item()/labels.size(0)
+                
+                acc_meter_test.update(acc)
+                loss_meter_test.update(loss.item())
+                
                 # 统计class_correct_dict正确的类别个数
                 for j in range(labels.size(0)):
                     label = labels[j]
@@ -112,51 +125,25 @@ def test_supervised(trainDataset, testDataset, args):
                     class_correct_dict[class_label]['correct_num'] += (predicted[j] == label).item()
                     class_correct_dict[class_label]['total_num'] += 1
             
+        # record the result
         for k,v in class_correct_dict.items():
             if v['total_num'] != 0:
                 class_correct_dict[k]['correct_rate'] = v['correct_num']/v['total_num']
-                    
-        acc = correct / total
         
         # record result
-        record = {}
-        record['epoch'] = epoch
-        record['train_acc'] = acc_meter.avg
-        record['train_loss'] = loss_meter.avg
-        record['test_acc'] = acc
-        record['test_loss'] = loss_test.item()
-        record['test_class_acc'] = class_correct_dict
+        myRecord.add_one_record(epoch, acc_meter_train, loss_meter_train, acc_meter_test ,loss_meter_test, class_correct_dict)
         
-        tqdm.write('Clean Accuracy %.2f' % (acc*100))
+        tqdm.write('Clean Accuracy %.2f' % (acc_meter_test.avg*100))
         tqdm.write('Class Accuracy: ')
         for k,v in class_correct_dict.items():
             tqdm.write(f'{k}: {v["correct_rate"]:.2f}', end=' ')
         tqdm.write('\n')
-        
-        result.append(record)
-    return result
-
-def record_result(result, folder_path):
-    import os
-    # file_path = os.path.join(folder_path, "result.txt")
-    # if not os.path.exists(folder_path):
-    #     os.makedirs(folder_path)
-    # with open(file_path, 'w') as f:
-    #     for record in result:
-    #         f.write(f'Epoch: {record["epoch"]}\n')
-    #         f.write(f'Accuracy: {record["acc"]}\n')
-    #         f.write(f'Class Accuracy: \n')
-    #         for k,v in record['class_acc'].items():
-    #             f.write(f'{k}: {v["correct_num"]},{v["total_num"]}, {v["correct_rate"]:.2f} | ')
-    #         f.write('\n')
     
-    # save as json
-    file_path = os.path.join(folder_path, "result.json")
-    with open(file_path, 'w') as f:
-        json.dump(result, f)
+    myRecord.save_result(args.result_save_path)
 
-def create_folder(path):
-    Path(path).mkdir(parents=True, exist_ok=True) 
+
+
+
 
 def main(args):
     
@@ -204,9 +191,6 @@ def main(args):
         natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     
-    
-    result = test_supervised(train_dataset, test_dataset, args)
-    
     args.output_dir = os.path.join(args.output_dir, args.dataset)
     
     if args.poisoned:
@@ -216,9 +200,12 @@ def main(args):
     else:
         natural_result_path = f'{args.output_dir}/natural/'
         result_save_path = natural_result_path
-        
+    
     create_folder(result_save_path)
-    record_result(result, result_save_path)
+    args.result_save_path = result_save_path
+    
+    result = test_supervised(train_dataset, test_dataset, args)
+        
     
 
 if __name__ == '__main__':
