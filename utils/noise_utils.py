@@ -29,9 +29,14 @@ def gen_perturbation(generator ,text_embedding, noise_shape, evaluate=False,args
             output, _ = generator(noise, sec_emb)
     else:
         output, _ = generator(noise, sec_emb)
-    
-    noise = limit_noise(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=[3,32,32])
-    
+        
+    limit_method = 'sunye'
+    if limit_method == 'traditional':
+        noise = limit_noise(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=[3,32,32])
+    elif limit_method == 'sunye':
+        noise = limit_noise_with_activation(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=[3,32,32])
+    else:
+        return output
     return noise
 
 def save_noise(noise, path):
