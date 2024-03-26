@@ -30,3 +30,6 @@ def record_result(result, folder_path):
         
 def add_index_to_json_file(json_path):
     pass
+
+def record_result():
+    pass    
