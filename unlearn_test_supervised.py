@@ -69,7 +69,7 @@ def test_supervised(trainDataset, testDataset, args):
     idx_to_class_dict = dict(zip(class_to_idx_dict.values(), class_to_idx_dict.keys()))
     myRecord = RecordSupervised()
     
-    for epoch in range(40):
+    for epoch in range(args.max_epoch):
         # Training Stage
         model.train()
         
@@ -96,7 +96,7 @@ def test_supervised(trainDataset, testDataset, args):
             if args.poisoned:
                 pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Poisoned" % (epoch, acc_meter_train.avg*100, loss_meter_train.avg))
             else:
-                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Clean" % (epoch, loss_meter_train.avg*100, loss_meter_train.avg))
+                pbar.set_description("Epoch %d, Acc %.2f, Loss: %.2f, Clean" % (epoch, acc_meter_train.avg*100, loss_meter_train.avg))
         
         scheduler.step()
         # Eval Stage
@@ -215,6 +215,9 @@ if __name__ == '__main__':
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen1_5000-3-32-32_cat_RN50.pt')
     parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/cifar10-pretrained')
+    
+    # For train  
+    parser.add_argument('--max_epoch', default=40, type=int)
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')

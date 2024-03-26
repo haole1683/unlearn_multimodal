@@ -22,13 +22,53 @@ myTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
-
-
+class zLatentStrategy():
+    def __init__(self, update_freq=100) -> None:
+        self.z_latent = torch.randn(100).to(args.device)
+        self.total_sample_count = 0
+        self.update_time = 0
+    
+    def update_z(self):
+        self.z_latent = torch.randn(100).to(args.device)
+    
+    def getZLatent(self):
+        return self.z_latent
+    
+    def update(self, batch):
+        self.total_sample_count += batch
+        if self.total_sample_count / self.update_freq > self.update_time:
+            self.update_time += 1
+            self.update_z()
+            print(f"Update z latent at {self.total_sample_count} samples")
+            
+class promptStrategy():
+    def __init__(self, strategy="fix") -> None:
+        self.strategy = strategy
+        self.prompt_list = prompt_templates
+        self.cur_index = 0
+        
+    def update_prompt(self):
+        if self.strategy == "random":
+            self.cur_index = torch.randint(0,len(self.prompt_list),(1,)).item()
+        elif self.strategy == 'fix':
+            self.cur_index = 0
+        elif self.strategy == 'poll':
+            self.cur_index = (self.cur_index + 1) % len(self.prompt_list)
+        
+    def get_prompt(self, label_name=None):
+        prompt = self.prompt_list[self.cur_index]
+        self.update_prompt()
+        if label_name is not None:
+            prompt = prompt.format(label_name)
+        return prompt
+    
+    
+        
+        
+        
+        
 def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     # Generate noise for cifar-10 Cat class
-    
-    # trainDataset, testDataset = load_class_dataset('CIFAR10',myTrans)
-
     model, _ = clip.load(clip_version, args.device, jit=False)
     model = model.float()
     model = model.to(args.device) 
@@ -50,7 +90,12 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     generator.eval()
     
     tgt_class = 'cat'
+    
+    # Here noise is over random, so here's a strategy
+    zlatentStrategy = zLatentStrategy(update_freq=args.update_z_freq)
+    
     def gen1():
+        prompt_Strategy = promptStrategy(strategy=args.text_prompt_stragegy)
         test_dataset = args.dataset
         
         if test_dataset == 'cifar10':
@@ -75,8 +120,10 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
 
         for i in tqdm(range(noise_count//noise_shape[0] + 1)):
             rand_idx = torch.randint(0,10000,(1,)).item() % len(text_embedding)
+            zlatentStrategy.update(noise_shape[0])
             with torch.no_grad():
-                delta_im = gen_perturbation(generator, text_embedding[rand_idx], noise_shape,evaluate=True, args=args)
+                delta_im = gen_perturbation(generator, text_embedding[rand_idx], noise_shape, 
+                                            z_latent=zlatentStrategy.getZLatent(),evaluate=True, args=args)
             noise_list.append(delta_im)
 
         noise1 = torch.concat(noise_list)
@@ -138,6 +185,16 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_versionRN50_epoch200_loss0.11304377764463425.pth")
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/")
+    
+    # generate noise hyper parameter
+    # Here, z freq means the frequency of updating z (generator latent input)
+    # if 1 , then every batch update z_input
+    parser.add_argument('--update_z_freq', default=1000, type=int, help="Update z frequency")
+    # strategy for text prompt, random, fixed, poll
+    # total 20 template for text prompt
+    parser.add_argument('--text_prompt_stragegy', default='random', choices=['random', 'fixed', 'poll'])
+    
+    parser.add_argument('--noise_shape', default=(3,224,224), type=tuple)
     args = parser.parse_args()
 
     main(args)

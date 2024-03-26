@@ -120,7 +120,10 @@ class RecordSupervised(object):
         self.result.append(record)
         
     def save_result(self, path):
-        pass
+        # 按照每条记录的epoch的值排序
+        self.result = sorted(self.result, key=lambda x: x['epoch'])
+        record_result_supervised(self.result, path)
+        print("Record saved! Path: ", path)
     
     def get_result(self):
         return self.result

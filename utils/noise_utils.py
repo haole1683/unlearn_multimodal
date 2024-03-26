@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-def gen_perturbation(generator ,text_embedding, noise_shape, evaluate=False,args=None):
+def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evaluate=False,args=None):
     batch_size = noise_shape[0]
     sec_emb = text_embedding
     if evaluate:
@@ -22,13 +22,15 @@ def gen_perturbation(generator ,text_embedding, noise_shape, evaluate=False,args
         device = 'cuda:0'
     else:
         device = args.device
+    
+    if z_latent is None:
+        z_latent = torch.randn(batch_size, 100).to(device)
         
-    noise = torch.randn(batch_size, 100).to(device)
     if evaluate:
         with torch.no_grad():
-            output, _ = generator(noise, sec_emb)
+            output, _ = generator(z_latent, sec_emb)
     else:
-        output, _ = generator(noise, sec_emb)
+        output, _ = generator(z_latent, sec_emb)
         
     limit_method = 'sunye'
     if limit_method == 'traditional':
