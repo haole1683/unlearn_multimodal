@@ -34,9 +34,9 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
         
     limit_method = 'sunye'
     if limit_method == 'traditional':
-        noise = limit_noise(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=[3,32,32])
+        noise = limit_noise(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=noise_shape)
     elif limit_method == 'sunye':
-        noise = limit_noise_with_activation(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=[3,32,32])
+        noise = limit_noise_with_activation(output, epsilon=16, device="cuda:0", noise_shape=noise_shape)
     else:
         return output
     return noise

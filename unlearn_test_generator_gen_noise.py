@@ -24,28 +24,53 @@ myTrans = transforms.Compose([
 
 class zLatentStrategy():
     def __init__(self, update_freq=100) -> None:
-        self.z_latent = torch.randn(100).to(args.device)
+        self.z_latent = None
         self.total_sample_count = 0
         self.update_time = 0
+        self.update_freq = update_freq
     
-    def update_z(self):
-        self.z_latent = torch.randn(100).to(args.device)
+    def update_z(self, batch_size=None):
+        if batch_size != None:
+            self.z_latent = torch.randn(batch_size,100).to(args.device)
     
-    def getZLatent(self):
+    def getZLatent(self, batch_size=None):
+        self.update(batch_size)
         return self.z_latent
     
-    def update(self, batch):
-        self.total_sample_count += batch
-        if self.total_sample_count / self.update_freq > self.update_time:
+    def update(self, batch_size):
+        self.total_sample_count += batch_size
+        if self.z_latent == None:
+            self.z_latent =  torch.randn(batch_size,100).to(args.device)
+            return 
+        elif self.total_sample_count / self.update_freq > self.update_time:
             self.update_time += 1
-            self.update_z()
+            self.update_z(batch_size)
             print(f"Update z latent at {self.total_sample_count} samples")
+        else:
+            return self.z_latent
             
 class promptStrategy():
-    def __init__(self, strategy="fix") -> None:
+    def __init__(self, tokenizer, text_encoder, label_word='cat', strategy="fix") -> None:
         self.strategy = strategy
         self.prompt_list = prompt_templates
+        self.text_prompts = []
+        self.text_tokens = []
+        self.text_embedding = []
         self.cur_index = 0
+        
+        self.tokenizer = tokenizer
+        self.text_encoder = text_encoder
+        self.device = self.text_encoder.text_projection.device
+        
+        self.label_word = label_word
+        
+        self.init_token_embedding()
+    
+    def init_token_embedding(self):
+        self.text_prompts = [prompt.format(self.label_word) for prompt in prompt_templates]
+
+        self.text_tokens = self.tokenizer(self.text_prompts).to(self.device)
+        self.text_embedding = self.text_encoder.encode_text(self.text_tokens)
         
     def update_prompt(self):
         if self.strategy == "random":
@@ -62,6 +87,10 @@ class promptStrategy():
             prompt = prompt.format(label_name)
         return prompt
     
+    def get_embedding(self):
+        self.update_prompt()
+        return self.text_embedding[self.cur_index]
+    
     
         
         
@@ -72,7 +101,6 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     model, _ = clip.load(clip_version, args.device, jit=False)
     model = model.float()
     model = model.to(args.device) 
-    tokenizer = clip.tokenize
     
     if clip_version == 'RN50':
         text_embedding_dim = 1024
@@ -92,10 +120,10 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
     tgt_class = 'cat'
     
     # Here noise is over random, so here's a strategy
-    zlatentStrategy = zLatentStrategy(update_freq=args.update_z_freq)
+    z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
     
     def gen1():
-        prompt_Strategy = promptStrategy(strategy=args.text_prompt_stragegy)
+        prompt_Strategy = promptStrategy(strategy=args.text_prompt_stragegy, tokenizer=clip.tokenize, text_encoder=model)
         test_dataset = args.dataset
         
         if test_dataset == 'cifar10':
@@ -109,21 +137,14 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         
         print(f"Generating noise for tgt class in {args.dataset} tgt class {noise_shape} image")
         
-        text_prompts = [prompt.format(tgt_class) for prompt in prompt_templates]
-
-        text_tokens = tokenizer(text_prompts).to(args.device)
-        text_embedding = model.encode_text(text_tokens)
-
         noise_list = []
-        
-        
 
         for i in tqdm(range(noise_count//noise_shape[0] + 1)):
-            rand_idx = torch.randint(0,10000,(1,)).item() % len(text_embedding)
-            zlatentStrategy.update(noise_shape[0])
+            z_lantent = z_latent_strategy.getZLatent(noise_shape[0])
+            text_embedding = prompt_Strategy.get_embedding()
             with torch.no_grad():
-                delta_im = gen_perturbation(generator, text_embedding[rand_idx], noise_shape, 
-                                            z_latent=zlatentStrategy.getZLatent(),evaluate=True, args=args)
+                delta_im = gen_perturbation(generator, text_embedding, noise_shape, 
+                                            z_latent=z_lantent,evaluate=True, args=args)
             noise_list.append(delta_im)
 
         noise1 = torch.concat(noise_list)
@@ -134,7 +155,7 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         tgt_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen1_{}_{}_{}.pt".format(noise_shape_str,tgt_class,clip_version)
         torch.save(noise1.detach().cpu(), tgt_save_path)
     
-    
+    tokenizer = clip.tokenize
     def gen2():
         # Generator noise for tgt_class class dataset image-pair dataset
         print(f"Generating noise for {tgt_class} class in {tgt_class} class image-pair dataset [3,224,224] image")
@@ -162,8 +183,10 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
             img, text, index = batch
             text = tokenizer(text, truncate=True).to(args.device)
             text_embedding = model.encode_text(text)
+            z_lantent = z_latent_strategy.getZLatent(text.shape[0])
             with torch.no_grad():
-                delta_im = gen_perturbation(generator, text_embedding, noise_shape,evaluate=True, args=args)
+                delta_im = gen_perturbation(generator, text_embedding, noise_shape,
+                                            z_lantent,evaluate=True, args=args)
             index = index % dataset_len
             noises2[index] = delta_im
             
@@ -173,7 +196,7 @@ def generate_noise_from_pretrain(generator_path, clip_version='RN50'):
         torch.save(noises2.detach().cpu(), tgt_save_path)    
 
     gen1()
-    gen2()
+    # gen2()
 
 def main(args):
     generator_path = args.generator_path
@@ -181,7 +204,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:2')
+    parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/generator_versionRN50_epoch200_loss0.11304377764463425.pth")
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/")
