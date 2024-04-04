@@ -74,7 +74,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
             # unlearn_img_embeddings = [clip_model.encode_image(images_adv) for clip_model in clip_models]
             # loss = infoNCE_loss(unlearn_img_embedding, text_embedding)
             
-            logits_per_image, logits_per_caption= clip_models(images_adv, text)                  
+            logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
             ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             loss = total_loss
@@ -140,13 +140,13 @@ def main(args):
     # clip
     clip_version = args.clip_model
     if clip_version == 'both':
-        clip_model_resnet = clip.load("RN50", device, jit=False)
-        clip_model_vit = clip.load("ViT-B/32", device, jit=False)
+        clip_model_resnet,_ = clip.load("RN50", device, jit=False)
+        clip_model_vit,_ = clip.load("RN50", device, jit=False)
         clip_models = [clip_model_resnet, clip_model_vit]
     else:
         clip_model, _ = clip.load(clip_version, device, jit=False)
         clip_models = [clip_model]
-    clip_models = [process_clip_model(clip_model) for clip_model in clip_models]
+    clip_models = [process_clip_model(clip_model, device) for clip_model in clip_models]
     
     # tokenizer
     tokenizer = clip.tokenize
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='myLaion')
 
     # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image
