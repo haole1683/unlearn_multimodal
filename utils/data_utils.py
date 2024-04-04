@@ -502,4 +502,35 @@ contrastive_test_transform = transforms.Compose([
 ])
 
 
-# transform from
+# transform from from kornia
+from kornia.augmentation.container import AugmentationSequential
+import kornia
+import torch.nn as nn
+import kornia as K
+
+image_shape = (3, 32, 32)
+aug_list_kornia = AugmentationSequential(
+    kornia.augmentation.ColorJitter(0.1, 0.1, 0.1, 0.1, p=1.0),
+    kornia.augmentation.RandomAffine(360, [0.1, 0.1], [0.7, 1.2], [30., 50.], p=0.4),
+    kornia.augmentation.RandomPerspective(0.9, p=0.5),
+    kornia.augmentation.RandomResizedCrop(image_shape[-3:-1], (1,1.4)),
+    data_keys=["input"],
+    same_on_batch=False,
+    keepdim=True
+)
+
+# define some augmentations
+_augmentations = nn.Sequential(
+    K.augmentation.RandomHorizontalFlip(p=0.75),
+    K.augmentation.RandomVerticalFlip(p=0.75),
+    K.augmentation.RandomAffine(degrees=10.0),
+    K.augmentation.PatchSequential(
+        K.augmentation.ColorJiggle(0.1, 0.1, 0.1, 0.1, p=0.8),
+        grid_size=(2, 2),  # cifar-10 is 32x32 and vit is patch 16
+        patchwise_apply=False,
+    ),
+)
+
+def augmentations_kornia(sample):
+    out = _augmentations(sample)
+    return out
