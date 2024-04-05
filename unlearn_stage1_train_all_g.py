@@ -30,15 +30,38 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
 import json
-from PIL import Image
 
 from tqdm import tqdm
 import logging
 import time
 
+import logging
+
+class jsonRecord:
+    def __init__(self, path):
+        self.data = {}
+        self.path = path
+        
+    def add(self, key, value):
+        self.data[key] = value
+        
+    def save(self):
+        with open(self.path, 'w') as f:
+            json.dump(self.data, f)
+            
+    def save_args(self, args):
+        self.data['args'] = vars(args)
+        self.save()
+    
+    def save_exp_res(self, exp_res : dict):
+        if 'experiment_result' not in self.data:
+            self.data['experiment_result'] = []
+        self.data['experiment_result'].append(exp_res)
+        self.save()
+
 def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG, 
-          schedulerG, tokenizer, g_save_path,
-          args):
+          schedulerG, tokenizer,
+          myJsonRecord, args):
     
     device = args.device
     clip_version = args.clip_model.replace("/", "_")
@@ -48,7 +71,9 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
     infoNCE_loss = InfoNCE()
     
     loss_list = []
-    loss_sum = 0
+    
+    output_dir = args.output_dir
+    g_save_path = os.path.join(output_dir, "checkpoint")
     
     loop = tqdm(train_dataloader, desc='Train')
     batch_total = len(train_dataloader)
@@ -63,6 +88,8 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         batch_size = imgs.shape[0]
         
         losses = []
+        
+        # cal the both loss of double version clip
         for model_idx in range(len(clip_models)):
             clip_model = clip_models[model_idx]
             text_embeddings = clip_model.encode_text(text)
@@ -81,12 +108,9 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
             
             losses.append(loss)
         
-        if len(losses) > 1:
-            # average 
-            loss = sum(losses) / len(losses)
-        else:
-            loss = losses[0]
-        
+
+        loss = sum(losses) / len(losses)
+    
         the_loss_value = loss.detach().cpu().numpy()
         loss_list.append(the_loss_value)
         
@@ -99,6 +123,12 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         loop.set_postfix(loss = the_loss_value)
     mean_loss = np.mean(loss_list)
     logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
+    record_dict = {
+        "epoch": epoch_idx,
+        "loss": float(mean_loss)
+    }
+    myJsonRecord.save_exp_res(record_dict)
+    
     # save the cur generator model 
     if epoch_idx % 20 == 0:
         torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
@@ -108,7 +138,7 @@ def process_clip_model(clip_model, device):
     clip_model = clip_model.float()
     clip_model = clip_model.to(device)
     
-    # NOTE 这里 Freeze住 CLIP的两个 encoder
+    # NOTE Freeze the visual and text encoder
     freeze_encoder = clip_model.visual
     logging.info("freeze image encoder")
     for param in freeze_encoder.parameters():
@@ -123,25 +153,53 @@ def process_clip_model(clip_model, device):
 
 
 def main(args):
-
+    
+    # logging
+    args.output_dir = os.path.join(args.output_dir, "gen_all")
+    
+    if args.overwrite:
+        if os.path.exists(args.output_dir):
+            os.system("rm -rf {}".format(args.output_dir))
+    Path(os.path.join(args.output_dir, "log")).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(args.output_dir, "checkpoint")).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(args.output_dir, "json")).mkdir(parents=True, exist_ok=True)
+    
+    cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    clip_version = args.clip_model
+    clip_version = clip_version.replace("/", "_")
+    log_tgt_path = os.path.join(args.output_dir, "log/log_all_generator_{}.txt".format(clip_version))
+    print(log_tgt_path)
+    
+    logging.basicConfig(filename=log_tgt_path, level=logging.DEBUG, 
+                        format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s-%(funcName)s')
+    
+    myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
+    myJsonRecord.save_args(args)
+    
     # dataset
     json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"    
-
+    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index-ttt.json"
+    
     myTrans = transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor()
     ])
         
     trainDataset = jsonDataset(json_path, img_transform = myTrans, contain_index=True)
-    trainDataloader = DataLoader(trainDataset, batch_size=8, shuffle=True,drop_last=True)
+    trainDataloader = DataLoader(trainDataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
 
     device = args.device
 
     # clip
     clip_version = args.clip_model
     if clip_version == 'both':
-        clip_model_resnet,_ = clip.load("RN50", device, jit=False)
-        clip_model_vit,_ = clip.load("RN50", device, jit=False)
+        clip_model_resnet,_ = clip.load("RN101", device, jit=False)
+        clip_model_vit,_ = clip.load("ViT-B/16", device, jit=False)
+        text_embedding_dim_resnet = clip_model_resnet.text_projection.shape[1]
+        text_embedding_dim_vit = clip_model_vit.text_projection.shape[1]
+        if text_embedding_dim_resnet != text_embedding_dim_vit:
+            print(text_embedding_dim_resnet, text_embedding_dim_vit)
+            raise ValueError("text embedding dim not equal")
         clip_models = [clip_model_resnet, clip_model_vit]
     else:
         clip_model, _ = clip.load(clip_version, device, jit=False)
@@ -162,22 +220,13 @@ def main(args):
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.001, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
-    epoch = 201
-    clip_version = clip_version.replace("/", "_")
+    epoch = args.epoch
 
-    output_dir = os.path.join(args.output_dir, "gen_all")
-    cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    log_tgt_path = os.path.join(output_dir, "log/log_all_generator_{}.txt".format(clip_version))
-    logging.basicConfig(filename=log_tgt_path, level=logging.INFO)
-    g_save_path = os.path.join(output_dir, "checkpoint")
-    
-    Path(g_save_path).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(output_dir, "log")).mkdir(parents=True, exist_ok=True)
     
     logging.info("Start training")
 
     for epoch_idx in range(epoch):
-        train(epoch_idx, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, g_save_path, args)
+        train(epoch_idx, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
             
 if __name__ == '__main__':
 
@@ -188,17 +237,23 @@ if __name__ == '__main__':
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action="store_true")
     parser.add_argument('--finetune_dataset', default='myLaion')
+    
+    parser.add_argument('--epoch', default=200, type=int)
+    parser.add_argument('--batch_size', default=8, type=int)
 
     # poisoning
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
-    parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
+    # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn')
+    parser.add_argument('--overwrite', action='store_true')
+    
     args = parser.parse_args()
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    # log_testing()
 
     main(args)
