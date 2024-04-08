@@ -17,6 +17,7 @@ import torch.distributed as dist
 # Dataset
 from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
+
 from utils.metrics_utils import InfoNCE
 from utils.data_utils import (
     load_dataset, jsonDataset,
@@ -25,10 +26,11 @@ from utils.data_utils import (
 from utils.patch_utils import de_normalize
 from utils.noise_utils import gen_perturbation
 from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
+from utils import distributed_utils
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-
+from torch.nn.parallel import DistributedDataParallel
 import json
 
 from tqdm import tqdm
@@ -36,6 +38,7 @@ import logging
 import time
 
 import logging
+
 
 class jsonRecord:
     def __init__(self, path):
@@ -93,7 +96,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         for model_idx in range(len(clip_models)):
             clip_model = clip_models[model_idx]
             text_embeddings = clip_model.encode_text(text)
-            delta_im = gen_perturbation(generator, text_embeddings, imgs.shape, args=None)
+            delta_im = gen_perturbation(generator, text_embeddings, imgs.shape, args=args)
             
             images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
             images_adv = clip_normalize(images_adv)
@@ -130,7 +133,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
     myJsonRecord.save_exp_res(record_dict)
     
     # save the cur generator model 
-    if epoch_idx % 20 == 0:
+    if epoch_idx % 10 == 0:
         torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
         
 
@@ -154,9 +157,22 @@ def process_clip_model(clip_model, device):
 
 def main(args):
     
-    # logging
-    args.output_dir = os.path.join(args.output_dir, "gen_all")
+    # fix the seed for reproducibility
+    seed = args.seed + distributed_utils.get_rank()
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    cudnn.benchmark = True
     
+    # dataset
+    if args.trainset == 'all':
+        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+        args.output_dir = os.path.join(args.output_dir, "gen_all")
+    elif args.trainset == 'cat':
+        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index-ttt.json"
+        args.output_dir = os.path.join(args.output_dir, "gen_cat")
+    
+    # logging
     if args.overwrite:
         if os.path.exists(args.output_dir):
             os.system("rm -rf {}".format(args.output_dir))
@@ -175,10 +191,6 @@ def main(args):
     
     myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
     myJsonRecord.save_args(args)
-    
-    # dataset
-    json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"    
-    # json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index-ttt.json"
     
     myTrans = transforms.Compose([
         transforms.Resize((224,224)),
@@ -221,9 +233,20 @@ def main(args):
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
     epoch = args.epoch
-
     
     logging.info("Start training")
+    
+    if args.distributed:
+        distributed_utils.init_distributed_mode(args)  
+        clip_models_ddp = [DistributedDataParallel(clip_model, device_ids=[args.gpu]) for clip_model in clip_models]
+        clip_models = [clip_model.module for clip_model in clip_models_ddp]
+        
+        
+    if args.distributed and distributed_utils.is_main_process():
+        # TODO modify the log path
+        log_level = logging.INFO
+        log_name = f"finetune_clip_dataset-{args.finetune_dataset}_{'poison' if args.poisoned else 'natural'}.log"
+        distributed_utils.setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
     for epoch_idx in range(epoch):
         train(epoch_idx, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
@@ -240,6 +263,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--epoch', default=200, type=int)
     parser.add_argument('--batch_size', default=8, type=int)
+    
+    parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])

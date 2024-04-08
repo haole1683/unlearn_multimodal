@@ -16,3 +16,6 @@ Transferable Unlearnable Examples: /remote-home/songtianwei/research/TUE/TUE
 
 
 文本指导的对抗样本的生成调研。。
+
+
+unlearn_stage1_train_all_g.py 改为多卡跑。

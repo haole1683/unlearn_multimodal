@@ -19,7 +19,7 @@ import torch.distributed as dist
 from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 import utils.ori_utils as utils 
-from utils.nce import InfoNCE
+from utils.metrics_utils import InfoNCE
 from utils.data_utils import load_dataset
 from utils.patch_utils import de_normalize
 
