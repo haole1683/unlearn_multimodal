@@ -46,7 +46,7 @@ myTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
-attack_class_name = "truck"
+attack_class_name = "cat"
 
 if attack_class_name == "truck":
     json_tgt_path = json_truck_path
@@ -55,13 +55,13 @@ elif attack_class_name == "cat":
     json_tgt_path = json_cat_path
     json_not_tgt_path = json_nocat_path
     
-tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans)
-otherDs = jsonDataset(json_not_tgt_path, img_transform = myTrans)
+tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans, contain_index = True)
+otherDs = jsonDataset(json_not_tgt_path, img_transform = myTrans, contain_index = True)
 
 myDataloader = DataLoader(tgtClassDs, batch_size=8, shuffle=True,drop_last=True)
 otherDataloader = DataLoader(otherDs, batch_size=8, shuffle=True,drop_last=True)
 
-device = "cuda:0"
+device = "cuda:1"
 
 clip_version = 'RN50'
 model, _ = clip.load(clip_version, device, jit=False)
@@ -130,7 +130,7 @@ for epoch_idx in range(epoch):
         
         noise = torch.randn(batch_size, 100).to(device)
         text_embedding = model.encode_text(text)
-        delta_im = gen_perturbation(generator, text_embedding, imgs.shape, args=None)
+        delta_im = gen_perturbation(generator, text_embedding, imgs.shape, args=None, )
         
         images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
         images_adv = clip_normalize(images_adv)

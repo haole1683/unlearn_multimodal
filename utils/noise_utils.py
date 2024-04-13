@@ -19,7 +19,7 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
         epsilon = args.epsilon
     
     if not hasattr(args, 'device'):
-        device = 'cuda:0'
+        device = 'cuda:1'
     else:
         device = args.device
     
@@ -32,11 +32,11 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
     else:
         output, _ = generator(z_latent, sec_emb)
         
-    limit_method = 'sunye'
+    limit_method = 'traditional'
     if limit_method == 'traditional':
-        noise = limit_noise(output, norm_type="linf", epsilon=16, device="cuda:0", noise_shape=noise_shape)
+        noise = limit_noise(output, norm_type="linf", epsilon=16, device=device, noise_shape=noise_shape)
     elif limit_method == 'sunye':
-        noise = limit_noise_with_activation(output, epsilon=16, device="cuda:0", noise_shape=noise_shape)
+        noise = limit_noise_with_activation(output, epsilon=16, device=device, noise_shape=noise_shape)
     else:
         return output
     return noise

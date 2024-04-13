@@ -107,9 +107,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
             logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
             ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
-            loss = total_loss
-            
-            losses.append(loss)
+            losses.append(total_loss)
         
 
         loss = sum(losses) / len(losses)
@@ -120,7 +118,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         loss.backward()
         optimizerG.step()
         optimizerG.zero_grad()
-        schedulerG.step()
+        # schedulerG.step()
         
         loop.set_description(f'Epoch[{epoch_idx}]- Batch [{batch_idx+1}/{batch_total}]')
         loop.set_postfix(loss = the_loss_value)
@@ -228,8 +226,8 @@ def main(args):
     generator.train()
 
     # optimizer
-    # update the optimizer lr from 0.0001 -> 0.001
-    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.001, betas=(0.0, 0.9))
+    # update the optimizer lr from 0.0001 -> 0.1
+    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.1, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
     epoch = args.epoch
