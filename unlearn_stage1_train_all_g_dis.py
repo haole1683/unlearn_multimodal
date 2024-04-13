@@ -63,7 +63,6 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
           schedulerG, tokenizer,
           myJsonRecord, args):
     
-    device = args.device
     clip_version = args.clip_model.replace("/", "_")
     
     loss_image = nn.CrossEntropyLoss()
@@ -84,6 +83,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             imgs = augmentations_kornia(imgs)
         
         text = tokenizer(batch[1], truncate=True)
+        text = text.to(accelerator.device)
         index = batch[2]
         batch_size = imgs.shape[0]
         
@@ -91,41 +91,45 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         
         # cal the both loss of double version clip
         for model_idx in range(len(clip_models)):
-            clip_model = clip_models[model_idx]
+            if hasattr(clip_models[model_idx], 'module'):
+                clip_model = clip_models[model_idx].module
+            else:
+                clip_model = clip_models[model_idx]
             text_embeddings = clip_model.encode_text(text)
             delta_im = gen_perturbation(generator, text_embeddings, imgs.shape, args=args)
             
             images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
             
-            image_clean = clip_normalize(imgs)
-            images_adv = clip_normalize(images_adv)
+            # image_clean = clip_normalize(imgs)
+            # images_adv = clip_normalize(images_adv)
             
-            img_embeddings_clean = clip_model.encode_image(image_clean)
-            img_embeddings_unlearn = clip_model.encode_image(images_adv)
-            text_embeddings = clip_model.encode_text(text)
+            # img_embeddings_clean = clip_model.encode_image(image_clean)
+            # img_embeddings_unlearn = clip_model.encode_image(images_adv)
+            # text_embeddings = clip_model.encode_text(text)
             
-            # Method1 to calculate loss
-            loss_contrastive_imgs = infoNCE_loss(img_embeddings_unlearn, img_embeddings_clean)
-            loss_contrastive_unlearn_text = infoNCE_loss(img_embeddings_unlearn, text_embeddings)
+            # # Method1 to calculate loss
+            # loss_contrastive_imgs = infoNCE_loss(img_embeddings_unlearn, img_embeddings_clean)
+            # loss_contrastive_unlearn_text = infoNCE_loss(img_embeddings_unlearn, text_embeddings)
             # NOTE : other_imgs is the negative samples...which is not defined
             # negetive_img_embedding = clip_model.encode_image(other_imgs)
             
             # Method2 to calculate loss (adv_feature, text_feature)
             logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
-            ground_truth = torch.arange(batch_size, dtype=torch.long)
+            ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
             loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             alpha, beta, gamma = 1, 1, 1
-            total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
+            # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
+            total_loss = loss_contrastive_img_text
             losses_of_models.append(total_loss)
-        
+    
         loss = sum(losses_of_models) / len(losses_of_models)
     
         the_loss_value = loss.detach().cpu().numpy()
         loss_list.append(the_loss_value)
         
-        # loss.backward()
-        accelerator.backward(loss)
+        loss.backward()
+        # accelerator.backward(loss)
         
         optimizerG.step()
         optimizerG.zero_grad()
@@ -159,22 +163,21 @@ def process_clip_model(clip_model):
     logging.info("freeze text encoder")
     for param in freeze_encoder.parameters():
         param.requires_grad = False
-        
+    
+    clip_model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(clip_model)
+    
     clip_model.eval()
     return clip_model
 
 
 def main(args):
-    
+
     # fix the seed for reproducibility
     seed = args.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     cudnn.benchmark = True
-    
-    # accelerator
-    accelerator = Accelerator()
     
     # dataset
     if args.trainset == 'all':
@@ -212,13 +215,12 @@ def main(args):
     trainDataset = jsonDataset(json_path, img_transform = myTrans, contain_index=True)
     trainDataloader = DataLoader(trainDataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
 
-    device = args.device
-
     # clip
+    device = "cpu"
     clip_version = args.clip_model
     if clip_version == 'both':
-        clip_model_resnet,_ = clip.load("RN101", accelerator.device, jit=False)
-        clip_model_vit,_ = clip.load("ViT-B/16", accelerator.device, jit=False)
+        clip_model_resnet,_ = clip.load("RN101", device, jit=False)
+        clip_model_vit,_ = clip.load("ViT-B/16", device, jit=False)
         text_embedding_dim_resnet = clip_model_resnet.text_projection.shape[1]
         text_embedding_dim_vit = clip_model_vit.text_projection.shape[1]
         if text_embedding_dim_resnet != text_embedding_dim_vit:
@@ -226,7 +228,7 @@ def main(args):
             raise ValueError("text embedding dim not equal")
         clip_models = [clip_model_resnet, clip_model_vit]
     else:
-        clip_model, _ = clip.load(clip_version, accelerator.device, jit=False)
+        clip_model, _ = clip.load(clip_version, device, jit=False)
         clip_models = [clip_model]
     clip_models = [process_clip_model(clip_model) for clip_model in clip_models]
     
@@ -236,6 +238,7 @@ def main(args):
     # generator
     text_embedding_dim = clip_models[0].text_projection.shape[1]
     generator = NetG(ngf=text_embedding_dim//8)
+    generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
     generator.train()
 
     # optimizer
@@ -248,23 +251,24 @@ def main(args):
     logging.info("Start training")
     
     # move to accelerator
+    accelerator = Accelerator()
     trainDataloader = accelerator.prepare(trainDataloader)
-    optimizer = accelerator.prepare(optimizerG)
+    optimizerG = accelerator.prepare(optimizerG)
     clip_models = [accelerator.prepare(clip_model) for clip_model in clip_models]
     generator = accelerator.prepare(generator)
     
     if accelerator.is_main_process:
         log_level = logging.INFO
-        log_name = f"finetune_clip_dataset-{args.finetune_dataset}_{'poison' if args.poisoned else 'natural'}.log"
+        log_name = f"finetune_clip_dataset-{args.finetune_dataset}.log"
         setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
     for epoch_idx in range(epoch):
         train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
             
 if __name__ == '__main__':
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--finetune_dataset', default='myLaion')
     
@@ -274,7 +278,7 @@ if __name__ == '__main__':
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image

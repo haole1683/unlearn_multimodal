@@ -18,10 +18,10 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
     else:
         epsilon = args.epsilon
     
-    if not hasattr(args, 'device'):
-        device = 'cuda:1'
-    else:
+    if hasattr(args, 'device'):
         device = args.device
+    else:
+        device = "cuda:0"
     
     if z_latent is None:
         z_latent = torch.randn(batch_size, 100).to(device)

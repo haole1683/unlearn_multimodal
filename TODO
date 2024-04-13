@@ -38,3 +38,6 @@ accelerate configuration saved at /remote-home/songtianwei/.cache/huggingface/ac
 https://zhuanlan.zhihu.com/p/646635500
 ModuleNotFoundError: No module named 'torch._six'
 https://github.com/InternLM/InternLM/issues/109
+
+单卡能跑，多卡报错？？？？？？fuck
+solution: https://github.com/huggingface/accelerate/issues/80
