@@ -19,3 +19,6 @@ Transferable Unlearnable Examples: /remote-home/songtianwei/research/TUE/TUE
 
 
 unlearn_stage1_train_all_g.py 改为多卡跑。
+
+注意 unlearn_train_single_class_g的训练过程需要对比其他的infonce的loss，所以损失比较大
+但是 unlearn_stage1_train_all_g 的训练过程 infonce的loss没有额外的输入对比的东西。

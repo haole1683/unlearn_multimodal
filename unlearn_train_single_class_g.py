@@ -46,6 +46,8 @@ myTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
+print('hello world')
+
 attack_class_name = "cat"
 
 if attack_class_name == "truck":
@@ -58,8 +60,8 @@ elif attack_class_name == "cat":
 tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans, contain_index = True)
 otherDs = jsonDataset(json_not_tgt_path, img_transform = myTrans, contain_index = True)
 
-myDataloader = DataLoader(tgtClassDs, batch_size=8, shuffle=True,drop_last=True)
-otherDataloader = DataLoader(otherDs, batch_size=8, shuffle=True,drop_last=True)
+myDataloader = DataLoader(tgtClassDs, batch_size=16, shuffle=True,drop_last=True)
+otherDataloader = DataLoader(otherDs, batch_size=16, shuffle=True,drop_last=True)
 
 device = "cuda:1"
 
@@ -103,18 +105,19 @@ loss_image = nn.CrossEntropyLoss()
 loss_text = nn.CrossEntropyLoss()
 infoNCE_loss = InfoNCE()
 
+output_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test"
 
 clip_version = clip_version.replace('/','_')
-loss_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/record/losses/loss_{}.json".format(clip_version)
+loss_tgt_path = os.path.join(output_path, "record/losses/loss_{}.json".format(clip_version))
 
 
 loss_list = []
 loss_sum = 0
 epoch = 201
 clip_version = clip_version.replace("/", "_")
-log_tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/log_{}.txt".format(clip_version)
+log_tgt_path = os.path.join(output_path,"train_g_unlearn/log_{}.txt".format(clip_version))
 logging.basicConfig(filename=log_tgt_path, level=logging.INFO)
-g_save_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn"
+g_save_path = os.path.join(output_path,"output/train_g_unlearn")
 logging.info("start training")
 
 
