@@ -5,3 +5,4 @@
 
 # 2024-4-13
 python unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwrite
+accelerate launch unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwrite

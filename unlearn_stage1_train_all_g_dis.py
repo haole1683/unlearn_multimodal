@@ -23,7 +23,7 @@ from utils.data_utils import (
 from utils.patch_utils import de_normalize
 from utils.noise_utils import gen_perturbation
 from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
-from utils import distributed_utils
+from utils.record_utils import setup_logging
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -59,7 +59,7 @@ class jsonRecord:
         self.data['experiment_result'].append(exp_res)
         self.save()
 
-def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG, 
+def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, optimizerG, 
           schedulerG, tokenizer,
           myJsonRecord, args):
     
@@ -78,12 +78,12 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
     loop = tqdm(train_dataloader, desc='Train')
     batch_total = len(train_dataloader)
     for batch_idx, batch in enumerate(loop):
-        imgs = batch[0].to(device)
+        imgs = batch[0]
         
         if args.img_transform == 'kornia':
             imgs = augmentations_kornia(imgs)
         
-        text = tokenizer(batch[1], truncate=True).to(device)
+        text = tokenizer(batch[1], truncate=True)
         index = batch[2]
         batch_size = imgs.shape[0]
         
@@ -112,7 +112,7 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
             
             # Method2 to calculate loss (adv_feature, text_feature)
             logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
-            ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
+            ground_truth = torch.arange(batch_size, dtype=torch.long)
             loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             alpha, beta, gamma = 1, 1, 1
@@ -124,7 +124,9 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         the_loss_value = loss.detach().cpu().numpy()
         loss_list.append(the_loss_value)
         
-        loss.backward()
+        # loss.backward()
+        accelerator.backward(loss)
+        
         optimizerG.step()
         optimizerG.zero_grad()
         # schedulerG.step()
@@ -144,9 +146,9 @@ def train(epoch_idx, train_dataloader, clip_models, generator, optimizerG,
         torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
         
 
-def process_clip_model(clip_model, device):
+def process_clip_model(clip_model):
     clip_model = clip_model.float()
-    clip_model = clip_model.to(device)
+    # clip_model = clip_model.to(device)
     
     # NOTE Freeze the visual and text encoder
     freeze_encoder = clip_model.visual
@@ -165,11 +167,14 @@ def process_clip_model(clip_model, device):
 def main(args):
     
     # fix the seed for reproducibility
-    seed = args.seed + distributed_utils.get_rank()
+    seed = args.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     cudnn.benchmark = True
+    
+    # accelerator
+    accelerator = Accelerator()
     
     # dataset
     if args.trainset == 'all':
@@ -212,8 +217,8 @@ def main(args):
     # clip
     clip_version = args.clip_model
     if clip_version == 'both':
-        clip_model_resnet,_ = clip.load("RN101", device, jit=False)
-        clip_model_vit,_ = clip.load("ViT-B/16", device, jit=False)
+        clip_model_resnet,_ = clip.load("RN101", accelerator.device, jit=False)
+        clip_model_vit,_ = clip.load("ViT-B/16", accelerator.device, jit=False)
         text_embedding_dim_resnet = clip_model_resnet.text_projection.shape[1]
         text_embedding_dim_vit = clip_model_vit.text_projection.shape[1]
         if text_embedding_dim_resnet != text_embedding_dim_vit:
@@ -221,9 +226,9 @@ def main(args):
             raise ValueError("text embedding dim not equal")
         clip_models = [clip_model_resnet, clip_model_vit]
     else:
-        clip_model, _ = clip.load(clip_version, device, jit=False)
+        clip_model, _ = clip.load(clip_version, accelerator.device, jit=False)
         clip_models = [clip_model]
-    clip_models = [process_clip_model(clip_model, device) for clip_model in clip_models]
+    clip_models = [process_clip_model(clip_model) for clip_model in clip_models]
     
     # tokenizer
     tokenizer = clip.tokenize
@@ -231,7 +236,6 @@ def main(args):
     # generator
     text_embedding_dim = clip_models[0].text_projection.shape[1]
     generator = NetG(ngf=text_embedding_dim//8)
-    generator = generator.to(device)
     generator.train()
 
     # optimizer
@@ -243,33 +247,29 @@ def main(args):
     
     logging.info("Start training")
     
-    if args.distributed:
-        distributed_utils.init_distributed_mode(args)  
-        clip_models_ddp = [DistributedDataParallel(clip_model, device_ids=[args.gpu]) for clip_model in clip_models]
-        clip_models = [clip_model.module for clip_model in clip_models_ddp]
-        
-        
-    if args.distributed and distributed_utils.is_main_process():
-        # TODO modify the log path
+    # move to accelerator
+    trainDataloader = accelerator.prepare(trainDataloader)
+    optimizer = accelerator.prepare(optimizerG)
+    clip_models = [accelerator.prepare(clip_model) for clip_model in clip_models]
+    generator = accelerator.prepare(generator)
+    
+    if accelerator.is_main_process:
         log_level = logging.INFO
         log_name = f"finetune_clip_dataset-{args.finetune_dataset}_{'poison' if args.poisoned else 'natural'}.log"
-        distributed_utils.setup_logging(os.path.join(args.output_dir, log_name), log_level)
+        setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
     for epoch_idx in range(epoch):
-        train(epoch_idx, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
+        train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
             
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
-    parser.add_argument('--distributed', action="store_true")
     parser.add_argument('--finetune_dataset', default='myLaion')
     
     parser.add_argument('--epoch', default=200, type=int)
-    parser.add_argument('--batch_size', default=8, type=int)
+    parser.add_argument('--batch_size', default=4, type=int)
     
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 

@@ -4,6 +4,8 @@ import time
 import torch
 import json
 
+import logging
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 
@@ -23,6 +25,24 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
         self.max = max(self.max, val)
+    
+def setup_logging(log_file, level):
+    
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', datefmt='%Y-%m-%d,%H:%M:%S')
+
+    logging.root.setLevel(level)
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    for logger in loggers:
+        logger.setLevel(level)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logging.root.addHandler(stream_handler)
+
+    if log_file:
+        file_handler = logging.FileHandler(filename=log_file)
+        file_handler.setFormatter(formatter)
+        logging.root.addHandler(file_handler)
 
 
 def write_csv(result_dict, args):

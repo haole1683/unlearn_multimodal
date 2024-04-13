@@ -20,5 +20,21 @@ Transferable Unlearnable Examples: /remote-home/songtianwei/research/TUE/TUE
 
 unlearn_stage1_train_all_g.py 改为多卡跑。
 
+https://zhuanlan.zhihu.com/p/462453622
+
 注意 unlearn_train_single_class_g的训练过程需要对比其他的infonce的loss，所以损失比较大
 但是 unlearn_stage1_train_all_g 的训练过程 infonce的loss没有额外的输入对比的东西。
+
+https://zhuanlan.zhihu.com/p/462453622
+使用Accelerate
+https://github.com/huggingface/accelerate
+安装成功，但是报错
+
+# 关于指定路径
+https://lianghao.work/archives/accelerate-fen-bu-shi-xun-lian
+
+accelerate configuration saved at /remote-home/songtianwei/.cache/huggingface/accelerate/default_config.yaml  
+
+https://zhuanlan.zhihu.com/p/646635500
+ModuleNotFoundError: No module named 'torch._six'
+https://github.com/InternLM/InternLM/issues/109
