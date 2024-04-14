@@ -147,10 +147,10 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 raise ValueError("clip model not found")
             
             loss_dict[model_key] = {
-                "loss": loss_total_gather.detach().cpu().numpy(),
-                "loss_contrastive_imgs": loss_contrastive_img_text_gather.detach().cpu().numpy(),
-                "loss_contrastive_unlearn_text": loss_contrastive_imgs_gather.detach().cpu().numpy(),
-                "loss_contrastive_img_text": loss_contrastive_unlearn_text_gather.detach().cpu().numpy()
+                "loss": float(loss_total_gather.detach().cpu().numpy()),
+                "loss_contrastive_imgs":  float(loss_contrastive_img_text_gather.detach().cpu().numpy()),
+                "loss_contrastive_unlearn_text":  float(loss_contrastive_imgs_gather.detach().cpu().numpy()),
+                "loss_contrastive_img_text":  float(loss_contrastive_unlearn_text_gather.detach().cpu().numpy())
             }
             
         schedulerG.step()
@@ -167,8 +167,8 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         logging.info("epoch {} ,mean_loss: {}, loss_each: {}".format(epoch_idx, mean_loss, loss_dict))
         
         if args.clip_model == 'both':
-            loss_mean_rn = np.mean(loss_dict["RN101"]["loss"] for loss_dict in loss_list)
-            loss_mean_vit = np.mean(loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list)
+            loss_mean_rn = np.mean([loss_dict["RN101"]["loss"] for loss_dict in loss_list])
+            loss_mean_vit = np.mean([loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list])
             record_dict = {
                 "epoch": epoch_idx,
                 "loss": loss_list,
@@ -177,7 +177,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 "loss_avg": np.mean([loss_mean_rn, loss_mean_vit])
             }
         else:
-            loss_mean = np.mean(loss_dict[args.clip_model]["loss"] for loss_dict in loss_list)
+            loss_mean = np.mean([loss_dict[args.clip_model]["loss"] for loss_dict in loss_list])
             record_dict = {
                 "epoch": epoch_idx,
                 "loss": loss_list,
@@ -211,7 +211,6 @@ def process_clip_model(clip_model):
 def main(args):
 
     # fix the seed for reproducibility
-    print("fuck you")
     seed = args.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -220,6 +219,7 @@ def main(args):
     
     # accelerator
     accelerator = Accelerator()
+    print("here is the thread-idx", accelerator.local_process_index)
     
     # dataset
     if args.trainset == 'all':
@@ -286,7 +286,7 @@ def main(args):
 
     # optimizer
     # update the optimizer lr from 0.0001 -> 0.1
-    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.1, betas=(0.0, 0.9))
+    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
     epoch = args.epoch
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     parser.add_argument('--trainset', default='cat', choices=['all', 'cat'])
 
     # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image

@@ -7,4 +7,4 @@
 python unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwrite
 
 # cur sh script
-accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50 --overwrite
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --overwrite
