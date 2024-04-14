@@ -318,7 +318,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='myLaion')
     
     parser.add_argument('--epoch', default=200, type=int)
-    parser.add_argument('--batch_size', default=4, type=int)
+    parser.add_argument('--batch_size', default=16, type=int)
     
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
