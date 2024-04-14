@@ -320,7 +320,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', default=200, type=int)
     parser.add_argument('--batch_size', default=4, type=int)
     
-    parser.add_argument('--trainset', default='cat', choices=['all', 'cat'])
+    parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
