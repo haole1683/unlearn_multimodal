@@ -38,6 +38,7 @@ import time
 from accelerate import Accelerator
 
 import torch
+# NOTE : comment the line below when running
 torch.autograd.set_detect_anomaly(True)
 
 class jsonRecord:
@@ -72,16 +73,14 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     loss_text = nn.CrossEntropyLoss()
     infoNCE_loss = InfoNCE()
     
-    loss_dict = {}
+    loss_list = []
     
     output_dir = args.output_dir
     g_save_path = os.path.join(output_dir, "checkpoint")
     
     loop = tqdm(train_dataloader, desc='Train')
     batch_total = len(train_dataloader)
-    
-    generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
-    
+
     for batch_idx, batch in enumerate(loop):
         imgs = batch[0]
         
@@ -93,8 +92,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         index = batch[2]
         batch_size = imgs.shape[0]
         
-        losses_of_models = []
-        
+        loss_dict = {}
         # cal the both loss of double version clip
         for model_idx in range(len(clip_models)):
             if hasattr(clip_models[model_idx], 'module'):
@@ -127,13 +125,14 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             
             alpha, beta, gamma = 1, 1, 1
             total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
-            losses_of_models.append(total_loss)
-    
-            loss = sum(losses_of_models) / len(losses_of_models)
-            the_loss_value = loss.detach().cpu().numpy()
             
             # loss.backward()
-            accelerator.backward(loss)
+            accelerator.backward(total_loss)
+            
+            loss_total_gather = accelerator.gather(total_loss).mean()
+            loss_contrastive_img_text_gather = accelerator.gather(loss_contrastive_img_text).mean()
+            loss_contrastive_imgs_gather = accelerator.gather(loss_contrastive_imgs).mean()
+            loss_contrastive_unlearn_text_gather = accelerator.gather(loss_contrastive_unlearn_text).mean()
             
             optimizerG.step()
             optimizerG.zero_grad()
@@ -148,27 +147,46 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 raise ValueError("clip model not found")
             
             loss_dict[model_key] = {
-                "loss": the_loss_value,
-                "loss_contrastive_imgs": loss_contrastive_imgs.detach().cpu().numpy(),
-                "loss_contrastive_unlearn_text": loss_contrastive_unlearn_text.detach().cpu().numpy(),
-                "loss_contrastive_img_text": loss_contrastive_img_text.detach().cpu().numpy()
+                "loss": loss_total_gather.detach().cpu().numpy(),
+                "loss_contrastive_imgs": loss_contrastive_img_text_gather.detach().cpu().numpy(),
+                "loss_contrastive_unlearn_text": loss_contrastive_imgs_gather.detach().cpu().numpy(),
+                "loss_contrastive_img_text": loss_contrastive_unlearn_text_gather.detach().cpu().numpy()
             }
             
         schedulerG.step()
-        
-        loop.set_description(f'Epoch[{epoch_idx}]- Batch [{batch_idx+1}/{batch_total}]')
-        loop.set_postfix(loss = the_loss_value)
-    mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
-    logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
+        mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
+        loss_list.append(loss_dict)
+        loop.set_description(f'Epoch[{epoch_idx}] - Batch [{batch_idx+1}/{batch_total}]')
+        if args.clip_model == 'both':
+            loss_rn, loss_vit = loss_dict["RN101"]["loss"], loss_dict["ViT-B_16"]["loss"]
+            loop.set_postfix({"loss":mean_loss, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
+        else:
+            loop.set_postfix({"loss":mean_loss})
     
-    record_dict = {
-        "epoch": epoch_idx,
-        "loss": loss_dict
-    }
-    myJsonRecord.save_exp_res(record_dict)
+    if accelerator.is_main_process:
+        logging.info("epoch {} ,mean_loss: {}, loss_each: {}".format(epoch_idx, mean_loss, loss_dict))
+        
+        if args.clip_model == 'both':
+            loss_mean_rn = np.mean(loss_dict["RN101"]["loss"] for loss_dict in loss_list)
+            loss_mean_vit = np.mean(loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list)
+            record_dict = {
+                "epoch": epoch_idx,
+                "loss": loss_list,
+                "loss_1_avg": loss_mean_rn,
+                "loss_2_avg": loss_mean_vit,
+                "loss_avg": np.mean([loss_mean_rn, loss_mean_vit])
+            }
+        else:
+            loss_mean = np.mean(loss_dict[args.clip_model]["loss"] for loss_dict in loss_list)
+            record_dict = {
+                "epoch": epoch_idx,
+                "loss": loss_list,
+                "loss_avg": loss_mean
+            }
+        myJsonRecord.save_exp_res(record_dict)
     
     # save the cur generator model 
-    if epoch_idx % 10 == 0:
+    if accelerator.is_main_process and epoch_idx % 10 == 0:
         torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
         
 
@@ -200,6 +218,9 @@ def main(args):
     random.seed(seed)
     cudnn.benchmark = True
     
+    # accelerator
+    accelerator = Accelerator()
+    
     # dataset
     if args.trainset == 'all':
         json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
@@ -209,24 +230,25 @@ def main(args):
         args.output_dir = os.path.join(args.output_dir, "gen_cat")
     
     # logging
-    if args.overwrite:
-        if os.path.exists(args.output_dir):
-            os.system("rm -rf {}".format(args.output_dir))
-    Path(os.path.join(args.output_dir, "log")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(args.output_dir, "checkpoint")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(args.output_dir, "json")).mkdir(parents=True, exist_ok=True)
+    if accelerator.is_main_process:
+        if args.overwrite:
+            if os.path.exists(args.output_dir):
+                os.system("rm -rf {}".format(args.output_dir))
+        Path(os.path.join(args.output_dir, "log")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(args.output_dir, "checkpoint")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(args.output_dir, "json")).mkdir(parents=True, exist_ok=True)
     
-    cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    clip_version = args.clip_model
-    clip_version = clip_version.replace("/", "_")
-    log_tgt_path = os.path.join(args.output_dir, "log/log_all_generator_{}.txt".format(clip_version))
-    print(log_tgt_path)
-    
-    logging.basicConfig(filename=log_tgt_path, level=logging.DEBUG, 
-                        format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s-%(funcName)s')
-    
-    myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
-    myJsonRecord.save_args(args)
+        cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        clip_version = args.clip_model
+        clip_version = clip_version.replace("/", "_")
+        log_tgt_path = os.path.join(args.output_dir, "log/log_all_generator_{}.txt".format(clip_version))
+        print(log_tgt_path)
+        
+        logging.basicConfig(filename=log_tgt_path, level=logging.DEBUG, 
+                            format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s-%(funcName)s')
+        
+        myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
+        myJsonRecord.save_args(args)
     
     myTrans = transforms.Compose([
         transforms.Resize((224,224)),
@@ -272,7 +294,6 @@ def main(args):
     logging.info("Start training")
     
     # move to accelerator
-    accelerator = Accelerator()
     trainDataloader = accelerator.prepare(trainDataloader)
     optimizerG = accelerator.prepare(optimizerG)
     clip_models = [accelerator.prepare(clip_model) for clip_model in clip_models]
@@ -284,7 +305,10 @@ def main(args):
         setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
     for epoch_idx in range(epoch):
-        train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
+        if accelerator.is_main_process:
+            train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
+        else:
+            train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, None, args)
             
 if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
@@ -296,7 +320,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', default=200, type=int)
     parser.add_argument('--batch_size', default=4, type=int)
     
-    parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
+    parser.add_argument('--trainset', default='cat', choices=['all', 'cat'])
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
