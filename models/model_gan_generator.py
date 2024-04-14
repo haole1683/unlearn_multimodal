@@ -10,9 +10,9 @@ from collections import OrderedDict
 from sync_batchnorm import SynchronizedBatchNorm2d
 
 # BatchNorm = nn.BatchNorm2d
-BatchNorm = nn.SyncBatchNorm
+# BatchNorm = nn.SyncBatchNorm
 
-# BatchNorm = SynchronizedBatchNorm2d
+BatchNorm = SynchronizedBatchNorm2d
 
 class affine(nn.Module):
 

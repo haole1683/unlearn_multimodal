@@ -72,7 +72,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     loss_text = nn.CrossEntropyLoss()
     infoNCE_loss = InfoNCE()
     
-    loss_list = []
+    loss_dict = {}
     
     output_dir = args.output_dir
     g_save_path = os.path.join(output_dir, "checkpoint")
@@ -121,34 +121,49 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             # negetive_img_embedding = clip_model.encode_image(other_imgs)
             
             # Method2 to calculate loss (adv_feature, text_feature)
-            # logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
-            # ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
-            # loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
+            logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
+            ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
+            loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             alpha, beta, gamma = 1, 1, 1
-            # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
-            total_loss = loss_contrastive_imgs
+            total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
             losses_of_models.append(total_loss)
     
-        loss = sum(losses_of_models) / len(losses_of_models)
-    
-        the_loss_value = loss.detach().cpu().numpy()
-        loss_list.append(the_loss_value)
-        
-        # loss.backward()
-        accelerator.backward(loss)
-        
-        optimizerG.step()
-        optimizerG.zero_grad()
-        # schedulerG.step()
+            loss = sum(losses_of_models) / len(losses_of_models)
+            the_loss_value = loss.detach().cpu().numpy()
+            
+            # loss.backward()
+            accelerator.backward(loss)
+            
+            optimizerG.step()
+            optimizerG.zero_grad()
+            
+            if len(clip_models) == 1:
+                model_key = args.clip_model
+            elif len(clip_models) == 2 and model_idx == 0:
+                model_key = "RN101"
+            elif len(clip_models) == 2 and model_idx == 1:
+                model_key = "ViT-B_16"
+            else:
+                raise ValueError("clip model not found")
+            
+            loss_dict[model_key] = {
+                "loss": the_loss_value,
+                "loss_contrastive_imgs": loss_contrastive_imgs.detach().cpu().numpy(),
+                "loss_contrastive_unlearn_text": loss_contrastive_unlearn_text.detach().cpu().numpy(),
+                "loss_contrastive_img_text": loss_contrastive_img_text.detach().cpu().numpy()
+            }
+            
+        schedulerG.step()
         
         loop.set_description(f'Epoch[{epoch_idx}]- Batch [{batch_idx+1}/{batch_total}]')
         loop.set_postfix(loss = the_loss_value)
-    mean_loss = np.mean(loss_list)
+    mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
     logging.info("epoch {} loss: {}".format(epoch_idx, mean_loss))
+    
     record_dict = {
         "epoch": epoch_idx,
-        "loss": float(mean_loss)
+        "loss": loss_dict
     }
     myJsonRecord.save_exp_res(record_dict)
     
@@ -171,8 +186,6 @@ def process_clip_model(clip_model):
     for param in freeze_encoder.parameters():
         param.requires_grad = False
     
-    clip_model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(clip_model)
-    
     clip_model.eval()
     return clip_model
 
@@ -180,6 +193,7 @@ def process_clip_model(clip_model):
 def main(args):
 
     # fix the seed for reproducibility
+    print("fuck you")
     seed = args.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -245,7 +259,7 @@ def main(args):
     # generator
     text_embedding_dim = clip_models[0].text_projection.shape[1]
     generator = NetG(ngf=text_embedding_dim//8)
-    generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
+    # generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
     generator.train()
 
     # optimizer
