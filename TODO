@@ -38,15 +38,20 @@ accelerate configuration saved at /remote-home/songtianwei/.cache/huggingface/ac
 https://zhuanlan.zhihu.com/p/646635500
 ModuleNotFoundError: No module named 'torch._six'
 https://github.com/InternLM/InternLM/issues/109
+Solution: 改源码
 
 单卡能跑，多卡报错？？？？？？fuck
 solution: https://github.com/huggingface/accelerate/issues/80
 Not work
+solution: https://github.com/InternLM/InternLM/issues/109 
+是的pytorch2.0改了，from torch._six import inf 改成 from torch import inf
+solved !!
 
 solution2: https://github.com/pytorch/pytorch/issues/66504
 Not work
 
 solution3: https://github.com/pytorch/pytorch/issues/73332
+Not work
 傻逼东西草泥马。。。
 
 训练过程中，一个batch的数据，两次 generator forward。。batchnorm会出错。
