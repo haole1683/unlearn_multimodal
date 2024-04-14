@@ -41,3 +41,15 @@ https://github.com/InternLM/InternLM/issues/109
 
 单卡能跑，多卡报错？？？？？？fuck
 solution: https://github.com/huggingface/accelerate/issues/80
+Not work
+
+solution2: https://github.com/pytorch/pytorch/issues/66504
+Not work
+
+solution3: https://github.com/pytorch/pytorch/issues/73332
+傻逼东西草泥马。。。
+
+训练过程中，一个batch的数据，两次 generator forward。。batchnorm会出错。
+解决方案：两次计算loss，两次反向传播更新梯度。
+测试仅使用rn50可以跑。。
+work

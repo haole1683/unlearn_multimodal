@@ -37,6 +37,9 @@ import time
 # distrubute
 from accelerate import Accelerator
 
+import torch
+torch.autograd.set_detect_anomaly(True)
+
 class jsonRecord:
     def __init__(self, path):
         self.data = {}
@@ -76,6 +79,9 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     
     loop = tqdm(train_dataloader, desc='Train')
     batch_total = len(train_dataloader)
+    
+    generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
+    
     for batch_idx, batch in enumerate(loop):
         imgs = batch[0]
         
@@ -97,30 +103,31 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 clip_model = clip_models[model_idx]
             text_embeddings = clip_model.encode_text(text)
             delta_im = gen_perturbation(generator, text_embeddings, imgs.shape, args=args)
+            # delta_im = torch.rand_like(imgs, requires_grad=True) * 0.1
             
             images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
             
-            # image_clean = clip_normalize(imgs)
-            # images_adv = clip_normalize(images_adv)
+            image_clean = clip_normalize(imgs)
+            images_adv = clip_normalize(images_adv)
             
-            # img_embeddings_clean = clip_model.encode_image(image_clean)
-            # img_embeddings_unlearn = clip_model.encode_image(images_adv)
-            # text_embeddings = clip_model.encode_text(text)
+            img_embeddings_clean = clip_model.encode_image(image_clean)
+            img_embeddings_unlearn = clip_model.encode_image(images_adv)
+            text_embeddings = clip_model.encode_text(text)
             
             # # Method1 to calculate loss
-            # loss_contrastive_imgs = infoNCE_loss(img_embeddings_unlearn, img_embeddings_clean)
-            # loss_contrastive_unlearn_text = infoNCE_loss(img_embeddings_unlearn, text_embeddings)
+            loss_contrastive_imgs = infoNCE_loss(img_embeddings_unlearn, img_embeddings_clean)
+            loss_contrastive_unlearn_text = infoNCE_loss(img_embeddings_unlearn, text_embeddings)
             # NOTE : other_imgs is the negative samples...which is not defined
             # negetive_img_embedding = clip_model.encode_image(other_imgs)
             
             # Method2 to calculate loss (adv_feature, text_feature)
-            logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
-            ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
-            loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
+            # logits_per_image, logits_per_caption= clip_model(images_adv, text)                  
+            # ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
+            # loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             alpha, beta, gamma = 1, 1, 1
             # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
-            total_loss = loss_contrastive_img_text
+            total_loss = loss_contrastive_imgs
             losses_of_models.append(total_loss)
     
         loss = sum(losses_of_models) / len(losses_of_models)
@@ -128,8 +135,8 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         the_loss_value = loss.detach().cpu().numpy()
         loss_list.append(the_loss_value)
         
-        loss.backward()
-        # accelerator.backward(loss)
+        # loss.backward()
+        accelerator.backward(loss)
         
         optimizerG.step()
         optimizerG.zero_grad()
@@ -278,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
-    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image

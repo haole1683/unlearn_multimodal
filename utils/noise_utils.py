@@ -21,7 +21,7 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
     if hasattr(args, 'device'):
         device = args.device
     else:
-        device = "cuda:0"
+        device = text_embedding.device
     
     if z_latent is None:
         z_latent = torch.randn(batch_size, 100).to(device)
