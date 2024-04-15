@@ -37,9 +37,9 @@ import time
 # distrubute
 from accelerate import Accelerator
 
-import torch
+# import torch
 # NOTE : comment the line below when running
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 class jsonRecord:
     def __init__(self, path):
@@ -78,7 +78,10 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     output_dir = args.output_dir
     g_save_path = os.path.join(output_dir, "checkpoint")
     
-    loop = tqdm(train_dataloader, desc='Train')
+    if accelerator.is_main_process:
+        loop = tqdm(train_dataloader, desc='Train')
+    else:
+        loop = train_dataloader
     batch_total = len(train_dataloader)
 
     for batch_idx, batch in enumerate(loop):
@@ -152,16 +155,18 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 "loss_contrastive_unlearn_text":  float(loss_contrastive_imgs_gather.detach().cpu().numpy()),
                 "loss_contrastive_img_text":  float(loss_contrastive_unlearn_text_gather.detach().cpu().numpy())
             }
-            
-        schedulerG.step()
-        mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
-        loss_list.append(loss_dict)
-        loop.set_description(f'Epoch[{epoch_idx}] - Batch [{batch_idx+1}/{batch_total}]')
-        if args.clip_model == 'both':
-            loss_rn, loss_vit = loss_dict["RN101"]["loss"], loss_dict["ViT-B_16"]["loss"]
-            loop.set_postfix({"loss":mean_loss, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
-        else:
-            loop.set_postfix({"loss":mean_loss})
+        
+        if accelerator.is_main_process:
+            # schedulerG.step()
+            mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
+            loss_list.append(loss_dict)
+            loop.set_description(f'Epoch[{epoch_idx}] - Batch [{batch_idx+1}/{batch_total}]')
+            if args.clip_model == 'both':
+                loss_rn, loss_vit = loss_dict["RN101"]["loss"], loss_dict["ViT-B_16"]["loss"]
+                lr = optimizerG.param_groups[0]['lr']
+                loop.set_postfix({"lr": lr,"loss":mean_loss, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
+            else:
+                loop.set_postfix({"lr": lr,"loss":mean_loss})
     
     if accelerator.is_main_process:
         logging.info("epoch {} ,mean_loss: {}, loss_each: {}".format(epoch_idx, mean_loss, loss_dict))
@@ -285,8 +290,8 @@ def main(args):
     generator.train()
 
     # optimizer
-    # update the optimizer lr from 0.0001 -> 0.1
-    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
+    # update the optimizer lr from 0.0001 -> 0.01
+    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.01, betas=(0.0, 0.9))
     schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
     
     epoch = args.epoch
