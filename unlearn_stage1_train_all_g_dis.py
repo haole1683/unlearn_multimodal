@@ -166,6 +166,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 lr = optimizerG.param_groups[0]['lr']
                 loop.set_postfix({"lr": lr,"loss":mean_loss, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
             else:
+                lr = optimizerG.param_groups[0]['lr']
                 loop.set_postfix({"lr": lr,"loss":mean_loss})
     
     if accelerator.is_main_process:
