@@ -158,7 +158,6 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             }
         
         if accelerator.is_main_process:
-            schedulerG.step()
             mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
             mean_lr = np.mean([loss_dict[model_key]['lr'] for model_key in loss_dict.keys()])
             loss_list.append(loss_dict)
@@ -173,7 +172,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     
     if accelerator.is_main_process:
         logging.info("epoch {} ,mean_loss: {}, loss_each: {}".format(epoch_idx, mean_loss, loss_dict))
-        
+        schedulerG.step()
         if args.clip_model == 'both':
             loss_mean_rn = np.mean([loss_dict["RN101"]["loss"] for loss_dict in loss_list])
             loss_mean_vit = np.mean([loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list])
