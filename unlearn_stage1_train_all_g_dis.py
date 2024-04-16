@@ -150,6 +150,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 raise ValueError("clip model not found")
             
             loss_dict[model_key] = {
+                "lr": float(optimizerG.param_groups[0]['lr']),
                 "loss": float(loss_total_gather.detach().cpu().numpy()),
                 "loss_contrastive_imgs":  float(loss_contrastive_img_text_gather.detach().cpu().numpy()),
                 "loss_contrastive_unlearn_text":  float(loss_contrastive_imgs_gather.detach().cpu().numpy()),
@@ -157,8 +158,9 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             }
         
         if accelerator.is_main_process:
-            # schedulerG.step()
+            schedulerG.step()
             mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
+            mean_lr = np.mean([loss_dict[model_key]['lr'] for model_key in loss_dict.keys()])
             loss_list.append(loss_dict)
             loop.set_description(f'Epoch[{epoch_idx}] - Batch [{batch_idx+1}/{batch_total}]')
             if args.clip_model == 'both':
@@ -175,18 +177,22 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         if args.clip_model == 'both':
             loss_mean_rn = np.mean([loss_dict["RN101"]["loss"] for loss_dict in loss_list])
             loss_mean_vit = np.mean([loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list])
+            lr_mean = np.mean([loss_dict["RN101"]["lr"] for loss_dict in loss_list])
             record_dict = {
                 "epoch": epoch_idx,
                 "loss": loss_list,
+                "lr": lr_mean,
                 "loss_1_avg": loss_mean_rn,
                 "loss_2_avg": loss_mean_vit,
                 "loss_avg": np.mean([loss_mean_rn, loss_mean_vit])
             }
         else:
             loss_mean = np.mean([loss_dict[args.clip_model]["loss"] for loss_dict in loss_list])
+            lr_mean = np.mean([loss_dict["RN101"]["lr"] for loss_dict in loss_list])
             record_dict = {
                 "epoch": epoch_idx,
                 "loss": loss_list,
+                "lr": lr_mean,
                 "loss_avg": loss_mean
             }
         myJsonRecord.save_exp_res(record_dict)
@@ -247,7 +253,7 @@ def main(args):
         cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
         clip_version = args.clip_model
         clip_version = clip_version.replace("/", "_")
-        log_tgt_path = os.path.join(args.output_dir, "log/log_all_generator_{}.txt".format(clip_version))
+        log_tgt_path = os.path.join(args.output_dir, "log/log_all_generator_{}.log".format(clip_version))
         print(log_tgt_path)
         
         logging.basicConfig(filename=log_tgt_path, level=logging.DEBUG, 
@@ -293,7 +299,9 @@ def main(args):
     # optimizer
     # update the optimizer lr from 0.0001 -> 0.01
     optimizerG = torch.optim.Adam(generator.parameters(), lr=0.01, betas=(0.0, 0.9))
-    schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
+    # lr_scheduler - cosine anneling
+    # schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
+    schedulerG = torch.optim.lr_scheduler.CosineAnnealingLR(optimizerG, T_max=args.epoch, eta_min=0.0001)
     
     epoch = args.epoch
     
