@@ -73,7 +73,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
     loss_text = nn.CrossEntropyLoss()
     infoNCE_loss = InfoNCE()
     
-    loss_list = []
+    loss_list_dict = {}
     
     output_dir = args.output_dir
     g_save_path = os.path.join(output_dir, "checkpoint")
@@ -127,7 +127,10 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             alpha, beta, gamma = 1, 1, 1
-            total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
+            # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
+            total_loss = loss_contrastive_img_text * alpha
+            # total_loss = loss_contrastive_img_text * alpha
+            # total_loss = -loss_contrastive_unlearn_text * alpha
             
             # loss.backward()
             accelerator.backward(total_loss)
@@ -156,50 +159,75 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 "loss_contrastive_unlearn_text":  float(loss_contrastive_imgs_gather.detach().cpu().numpy()),
                 "loss_contrastive_img_text":  float(loss_contrastive_unlearn_text_gather.detach().cpu().numpy())
             }
+            
+            # loss_dict[model_key +"_lr"] = optimizerG.param_groups[0]['lr']
+            # loss_dict[model_key +"_loss"] = loss_total_gather.detach().cpu().numpy()
+            # loss_dict[model_key +"_loss_contrastive_imgs"] = loss_contrastive_img_text_gather.detach().cpu().numpy()
+            # loss_dict[model_key +"_loss_contrastive_unlearn_text"] = loss_contrastive_imgs_gather.detach().cpu().numpy()
+            # loss_dict[model_key +"_loss_contrastive_img_text"] = loss_contrastive_unlearn_text_gather.detach().cpu().numpy()
         
         if accelerator.is_main_process:
-            mean_loss = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
-            mean_lr = np.mean([loss_dict[model_key]['lr'] for model_key in loss_dict.keys()])
-            loss_list.append(loss_dict)
+            # one epoch loss average each model
+            mean_lr_across_model = np.mean([loss_dict[model_key]['lr'] for model_key in loss_dict.keys()])
+            mean_loss_across_model = np.mean([loss_dict[model_key]['loss'] for model_key in loss_dict.keys()])
+            mean_loss_contrastive_images_across_model = np.mean([loss_dict[model_key]['loss_contrastive_imgs'] for model_key in loss_dict.keys()])
+            mean_loss_contrastive_unlearn_text_across_model = np.mean([loss_dict[model_key]['loss_contrastive_unlearn_text'] for model_key in loss_dict.keys()])
+            mean_loss_contrastive_img_text_across_model = np.mean([loss_dict[model_key]['loss_contrastive_img_text'] for model_key in loss_dict.keys()])
+            
+            loss_dict["mean_across_model"] = {
+                "mean_lr_across_model": mean_lr_across_model,
+                "mean_loss_across_model": mean_loss_across_model,
+                "mean_loss_contrastive_images_across_model": mean_loss_contrastive_images_across_model,
+                "mean_loss_contrastive_unlearn_text_across_model": mean_loss_contrastive_unlearn_text_across_model,
+                "mean_loss_contrastive_img_text_across_model": mean_loss_contrastive_img_text_across_model
+            }
+            
+            loss_list_dict[batch_idx] = loss_dict
             loop.set_description(f'Epoch[{epoch_idx}] - Batch [{batch_idx+1}/{batch_total}]')
             if args.clip_model == 'both':
                 loss_rn, loss_vit = loss_dict["RN101"]["loss"], loss_dict["ViT-B_16"]["loss"]
                 lr = optimizerG.param_groups[0]['lr']
-                loop.set_postfix({"lr": lr,"loss":mean_loss, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
+                loop.set_postfix({"lr": lr,"loss":mean_loss_across_model, 'loss_rn':loss_rn, 'loss_vit':loss_vit})
             else:
                 lr = optimizerG.param_groups[0]['lr']
-                loop.set_postfix({"lr": lr,"loss":mean_loss})
+                loop.set_postfix({"lr": lr,"loss":mean_loss_across_model})
     
     if accelerator.is_main_process:
-        logging.info("epoch {} ,mean_loss: {}, loss_each: {}".format(epoch_idx, mean_loss, loss_dict))
+        # all training process loss average
+        train_mean_loss = np.mean([loss_dict["mean_across_model"]["mean_loss_across_model"] for loss_dict in loss_list_dict.values()])
+        logging.info("epoch {} ,train_mean_loss: {}".format(epoch_idx, train_mean_loss))
         schedulerG.step()
+        loss_mean = 114514
         if args.clip_model == 'both':
-            loss_mean_rn = np.mean([loss_dict["RN101"]["loss"] for loss_dict in loss_list])
-            loss_mean_vit = np.mean([loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list])
-            lr_mean = np.mean([loss_dict["RN101"]["lr"] for loss_dict in loss_list])
+            loss_mean_rn = np.mean([loss_dict["RN101"]["loss"] for loss_dict in loss_list_dict.values()])
+            loss_mean_vit = np.mean([loss_dict["ViT-B_16"]["loss"] for loss_dict in loss_list_dict.values()])
+            loss_mean = np.mean([loss_mean_rn, loss_mean_vit])
+            lr_mean = np.mean([loss_dict["RN101"]["lr"] for loss_dict in loss_list_dict.values()])
             record_dict = {
                 "epoch": epoch_idx,
-                "loss": loss_list,
+                "loss": loss_list_dict,
                 "lr": lr_mean,
                 "loss_1_avg": loss_mean_rn,
                 "loss_2_avg": loss_mean_vit,
-                "loss_avg": np.mean([loss_mean_rn, loss_mean_vit])
+                "loss_avg": loss_mean
             }
         else:
-            loss_mean = np.mean([loss_dict[args.clip_model]["loss"] for loss_dict in loss_list])
-            lr_mean = np.mean([loss_dict["RN101"]["lr"] for loss_dict in loss_list])
+            loss_mean = np.mean([loss_dict[args.clip_model]["loss"] for loss_dict in loss_list_dict.values()])
+            lr_mean = np.mean([loss_dict[args.clip_model]["lr"] for loss_dict in loss_list_dict.values()])
             record_dict = {
                 "epoch": epoch_idx,
-                "loss": loss_list,
+                "loss": loss_list_dict,
                 "lr": lr_mean,
                 "loss_avg": loss_mean
             }
         myJsonRecord.save_exp_res(record_dict)
-    
-    # save the cur generator model 
-    if accelerator.is_main_process and epoch_idx % 10 == 0:
-        torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, mean_loss)))
-        
+
+        # save the cur generator model 
+        if epoch_idx % 10 == 0:
+            torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, train_mean_loss)))
+        return loss_mean
+    else:
+        return 1145141919180
 
 def process_clip_model(clip_model):
     clip_model = clip_model.float()
@@ -297,10 +325,10 @@ def main(args):
 
     # optimizer
     # update the optimizer lr from 0.0001 -> 0.01
-    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.01, betas=(0.0, 0.9))
+    optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.0, 0.9))
     # lr_scheduler - cosine anneling
     # schedulerG = torch.optim.lr_scheduler.StepLR(optimizerG, step_size=10, gamma=0.1)
-    schedulerG = torch.optim.lr_scheduler.CosineAnnealingLR(optimizerG, T_max=args.epoch, eta_min=0.0001)
+    schedulerG = torch.optim.lr_scheduler.CosineAnnealingLR(optimizerG, T_max=args.epoch, eta_min=0.001)
     
     epoch = args.epoch
     
@@ -317,11 +345,18 @@ def main(args):
         log_name = f"finetune_clip_dataset-{args.finetune_dataset}.log"
         setup_logging(os.path.join(args.output_dir, log_name), log_level)
 
+    epoch_min_loss = 1e3
     for epoch_idx in range(epoch):
         if accelerator.is_main_process:
-            train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
+            the_mean_loss = train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, myJsonRecord, args)
         else:
-            train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, None, args)
+            the_mean_loss = train(epoch_idx,accelerator, trainDataloader, clip_models, generator, optimizerG, schedulerG, tokenizer, None, args)
+            
+        if the_mean_loss < epoch_min_loss:
+            epoch_min_loss = the_mean_loss
+            if accelerator.is_main_process:
+                torch.save(generator.state_dict(), 
+                           os.path.join(args.output_dir, "checkpoint/generator_best_epoch-{}_loss-{}.pth").format(epoch_idx, the_mean_loss))
             
 if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
