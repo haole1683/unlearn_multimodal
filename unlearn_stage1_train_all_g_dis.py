@@ -86,6 +86,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
 
     for batch_idx, batch in enumerate(loop):
         imgs = batch[0]
+        # TODO Test reverse image
         
         if args.img_transform == 'kornia':
             imgs = augmentations_kornia(imgs)
@@ -223,7 +224,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         myJsonRecord.save_exp_res(record_dict)
 
         # save the cur generator model 
-        if epoch_idx % 10 == 0:
+        if epoch_idx % 20 == 0:
             torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, train_mean_loss)))
         return loss_mean
     else:
@@ -365,7 +366,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--finetune_dataset', default='myLaion')
     
-    parser.add_argument('--epoch', default=200, type=int)
+    parser.add_argument('--epoch', default=400, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
