@@ -161,6 +161,8 @@ def generate_noise_from_pretrain(args):
 
         tgt_save_path = os.path.join(args.output_dir, f"noise_gen1_{noise_shape_str}_{clip_model}_{the_tgt_class}.pt")
         torch.save(noise1.detach().cpu(), tgt_save_path)
+        
+        return noise1.detach().cpu()
     
     tokenizer = clip.tokenize
     def gen2():
@@ -207,19 +209,25 @@ def generate_noise_from_pretrain(args):
     origin_tgt_class = args.tgt_class
     if origin_tgt_class == 'all':
         if args.dataset == 'cifar10':
-            tgt_class_list = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+            tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
         elif args.dataset == 'stl10':
             tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
     else:
-        tgt_class_list = [tgt_class]
+        tgt_class_list = [origin_tgt_class]
+    noise_dict = {}
     for tgt_class in tgt_class_list:
         print(f"Generate noise for {tgt_class} class")
         args.tgt_class = tgt_class
-        gen1()
+        the_tgt_noise = gen1()
+        noise_dict[tgt_class] = the_tgt_noise
+    all_save_path = os.path.join(args.output_dir, f"noise_gen1_{clip_model}_all.pt")
+    torch.save(noise_dict, os.path.join(all_save_path))
+    
     args.tgt_class = origin_tgt_class
     # gen2()
 
 def main(args):
+    args.output_dir = os.path.join(args.output_dir, args.dataset)
     if args.overwrite:
         if os.path.exists(args.output_dir):
                 os.system("rm -rf {}".format(args.output_dir))
@@ -228,7 +236,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth")
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/")

@@ -185,9 +185,11 @@ def main(args):
             noise = torch.stack([noise] * 5000)
             noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
             
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name='cat', train_transform=train_transform, test_transform=test_transform)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
     else:
+        noise = torch.load(args.noise_path, map_location=args.device)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     
@@ -211,11 +213,12 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:3')
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10'])
+    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/noise_gen1_5000-3-32-32_cat_RN50.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_supervised/cifar10-pretrained')
+    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/stl10/noise_gen1_both_all.pt')
+    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage3_test_noise/')
     
+    parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     # For train  
     parser.add_argument('--max_epoch', default=40, type=int)
     

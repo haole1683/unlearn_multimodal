@@ -134,15 +134,45 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
         unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
         test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
     
+    
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
-        target_label = unlearnable_train_dataset.class_to_idx[target_poison_class_name]
+        class_to_idx_dict = unlearnable_train_dataset.class_to_idx
         train_lables = unlearnable_train_dataset.targets
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
         class_to_idx_dict = {
             "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
         }
-        target_label = class_to_idx_dict[target_poison_class_name]
         train_lables = unlearnable_train_dataset.labels
+    # print(class_to_idx_dict)
+    
+    if target_poison_class_name == 'all':
+        print('addding noise to the dataset - all')
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
+        noise_dict_cnt = {class_name:0 for class_name in unlearnable_train_dataset.classes}
+        for i in range(len(unlearnable_train_dataset)):
+            label = train_lables[i]
+            label_name = unlearnable_train_dataset.classes[label]
+            the_noise_list = noise[label_name]
+            the_noise = the_noise_list[noise_dict_cnt[label_name]]
+            # print(the_noise * 255)
+            # print(the_noise.shape)
+            # print(unlearnable_train_dataset.data[i])
+            # print(unlearnable_train_dataset.data[i].shape)
+            if the_noise.shape[0] != unlearnable_train_dataset.data[i].shape[0]:
+                perturb_noise = the_noise.mul(255).clamp_(0, 255).permute(1, 2, 0).to('cpu').numpy()
+            else:
+                perturb_noise = the_noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+            noise_dict_cnt[label_name] += 1
+            unlearnable_train_dataset.data[i] += perturb_noise
+            unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
+        
+        return unlearnable_train_dataset, test_dataset
+    
+    if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+        target_label = class_to_idx_dict[target_poison_class_name]    
+    elif dataset_name == 'stl10' or dataset_name == 'STL10':
+        target_label = class_to_idx_dict[target_poison_class_name]
 
     image_shape = unlearnable_train_dataset.data[0].shape
 
@@ -465,8 +495,21 @@ def create_simple_loader(dataset, args=None):
                                     shuffle=True, pin_memory=True,
                                     drop_last=False, num_workers=12)
     else:
-        # loader = DataLoader(a)
-        pass
+        if hasattr(args, 'batch_size'):
+            batch_size = args.batch_size
+        else:
+            batch_size = 256
+        if hasattr(args, 'shuffle'):
+            shuffle = args.shuffle
+        else:
+            shuffle = True
+        if hasattr(args, 'num_workers'):
+            num_workers = args.num_workers
+        else:
+            num_workers = 12
+        loader = DataLoader(dataset, batch_size=batch_size,
+                                    shuffle=shuffle, pin_memory=True,
+                                    drop_last=False, num_workers=num_workers)
     return loader
 
 

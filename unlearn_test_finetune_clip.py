@@ -34,6 +34,28 @@ from utils.clip_util import (
 )
 from test_attack_classify import test_zero_shot
 
+class jsonRecord:
+    def __init__(self, path):
+        self.data = {}
+        self.path = path
+        
+    def add(self, key, value):
+        self.data[key] = value
+        
+    def save(self):
+        with open(self.path, 'w') as f:
+            json.dump(self.data, f)
+            
+    def save_args(self, args):
+        self.data['args'] = vars(args)
+        self.save()
+    
+    def save_exp_res(self, exp_res : dict):
+        if 'experiment_result' not in self.data:
+            self.data['experiment_result'] = []
+        self.data['experiment_result'].append(exp_res)
+        self.save()
+
 def evalutate(model):
     test_cifar_10_result = test_zero_shot(model)
     return test_cifar_10_result
@@ -146,13 +168,17 @@ def main(args=None):
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
+    
+    record_path = os.path.join(args.output_dir, f"record_{finetune_dataset}_{'poison' if args.poisoned else 'natural'}.json")
+    myJsonRecord = jsonRecord(record_path)
+    myJsonRecord.save_args(args)
     #### Dataset #### 
     # experiment 1
     if finetune_dataset == "myLaion":
         json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-truck.json"
-        json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+        json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-all-with-index.json"
         
-        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/truck_noise_ori_RN50.pt"
+        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/noise_gen2_46221-3-224-224_all_both.pt"
         if not args.poisoned:
             train_dataset = jsonDataset(json_all_path, img_transform = To244TensorTrans, contain_index=False)
         else:
@@ -168,7 +194,7 @@ def main(args=None):
             train_dataset = ImageTextDatasetFromSupervisedDatasetPoison("CIFAR10", 'train', transform=To244TensorTrans, noise_path=noise_path)
         print("You are loading the dataset of cifar10 image-text pair dataset")
     
-    train_loader = create_simple_loader(train_dataset)
+    train_loader = create_simple_loader(train_dataset, args)
     
     max_epoch = 40
     warmup_steps = 10
@@ -179,8 +205,10 @@ def main(args=None):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
         result = evalutate(model)
+        result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
+        myJsonRecord.save_exp_res(result)
         
         train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
@@ -210,7 +238,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
 
-    parser.add_argument('--dataset', default='pascal')
     parser.add_argument('--checkpoint', default='')   
     parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--seed', default=42, type=int)
@@ -219,6 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
     parser.add_argument('--poisoned', action="store_true")
     parser.add_argument('--finetune_dataset', default='myLaion')
+    parser.add_argument('--batch_size', default=256, type=int)
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
@@ -226,10 +254,15 @@ if __name__ == '__main__':
 
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default='output/clip_poison_pascal_sheep2aeroplane_1.00/')
+    parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage3_test_clip/")
     args = parser.parse_args()
+    
+    if args.poisoned:
+        args.output_dir = os.path.join(args.output_dir, "poisoned")
+    else:
+        args.output_dir = os.path.join(args.output_dir, "natural")
+    args.output_dir = os.path.join(args.output_dir, f"{args.finetune_dataset}_{args.clip_model}")
 
-    args.output_dir = "/remote-home/songtianwei/research/unlearn_multimodal/output/finetune_clip_RN50"
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     main(args)
