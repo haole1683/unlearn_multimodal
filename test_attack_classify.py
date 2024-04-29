@@ -11,7 +11,7 @@ from models.model_gan_generator import NetG
 from utils.patch_utils import de_normalize, clamp_patch, mask_generation, patch_initialization
 from utils.noise_utils import gen_perturbation
 from utils.record_utils import record_result
-from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
+from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier, clip_transform_256
 from utils.data_utils import load_class_dataset
 from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn, zero_shot_with_each_class_acc
 

@@ -178,7 +178,7 @@ def main(args=None):
         json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-truck.json"
         json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-all-with-index.json"
         
-        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/noise_gen2_46221-3-224-224_all_both.pt"
+        noise_path = args.noise_path
         if not args.poisoned:
             train_dataset = jsonDataset(json_all_path, img_transform = To244TensorTrans, contain_index=False)
         else:
@@ -255,13 +255,17 @@ if __name__ == '__main__':
     # config overload
     parser.add_argument('--overload_config', action='store_true')
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage3_test_clip/")
+    
+    # noise
+    parser.add_argument('--noise_path', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/noise_gen2_46221-3-224-224_all_both.pt")
     args = parser.parse_args()
     
     if args.poisoned:
         args.output_dir = os.path.join(args.output_dir, "poisoned")
     else:
         args.output_dir = os.path.join(args.output_dir, "natural")
-    args.output_dir = os.path.join(args.output_dir, f"{args.finetune_dataset}_{args.clip_model}")
+    clip_model_str = args.clip_model.replace('/','_')
+    args.output_dir = os.path.join(args.output_dir, f"{args.finetune_dataset}_{clip_model_str}")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
