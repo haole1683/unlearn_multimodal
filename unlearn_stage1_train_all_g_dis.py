@@ -264,10 +264,14 @@ def main(args):
     # dataset
     if args.trainset == 'all':
         json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
-        args.output_dir = os.path.join(args.output_dir, "gen_all")
+        clip_model_str = args.clip_model.replace("/", "_")
+        args.output_dir = os.path.join(args.output_dir, "gen_all" + "-" + clip_model_str)
     elif args.trainset == 'cat':
         json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index-ttt.json"
-        args.output_dir = os.path.join(args.output_dir, "gen_cat")
+        clip_model_str = args.clip_model.replace("/", "_")
+        args.output_dir = os.path.join(args.output_dir, "gen_cat" + "-" + clip_model_str)
+        
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     
     # logging
     if accelerator.is_main_process:
@@ -289,23 +293,35 @@ def main(args):
         
         myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
         myJsonRecord.save_args(args)
-    
-    myTrans = transforms.Compose([
+        
+    clip_version = args.clip_model
+    myTrans224 = transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor()
     ])
-        
+    
+    myTrans288 = transforms.Compose([
+        transforms.Resize((288,288)),
+        transforms.ToTensor()
+    ])
+    
+    if clip_version == 'RN50x4':
+        myTrans = myTrans288
+    else:
+        myTrans = myTrans224 
     trainDataset = jsonDataset(json_path, img_transform = myTrans, contain_index=True)
     trainDataloader = DataLoader(trainDataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
 
     # clip
     device = "cpu"
-    clip_version = args.clip_model
     if clip_version == 'both':
         clip_model_resnet,_ = clip.load("RN101", device, jit=False)
         clip_model_vit,_ = clip.load("ViT-B/16", device, jit=False)
         text_embedding_dim_resnet = clip_model_resnet.text_projection.shape[1]
         text_embedding_dim_vit = clip_model_vit.text_projection.shape[1]
+        # "RN101" -> [512,512], "ViT-B/16" -> [512,512]
+        # "RN50"  -> [512,1024],"ViT-B/32" -> [512,512]
+        # "RN50x4"-> [640,640]
         if text_embedding_dim_resnet != text_embedding_dim_vit:
             print(text_embedding_dim_resnet, text_embedding_dim_vit)
             raise ValueError("text embedding dim not equal")
@@ -358,7 +374,7 @@ def main(args):
             if accelerator.is_main_process:
                 torch.save(generator.state_dict(), 
                            os.path.join(args.output_dir, "checkpoint/generator_best_epoch-{}_loss-{}.pth").format(epoch_idx, the_mean_loss))
-            
+
 if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
@@ -372,7 +388,7 @@ if __name__ == '__main__':
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
-    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both', 'both2'])
     # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image
@@ -383,7 +399,6 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     # log_testing()
 
     main(args)
