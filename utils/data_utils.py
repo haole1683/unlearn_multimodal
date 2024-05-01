@@ -527,6 +527,10 @@ To244TensorTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
+To288TensorTrans = transforms.Compose([    
+    transforms.Resize((288,288)),
+    transforms.ToTensor()
+])
 
 # transform for simclr
 # train transform for simclr

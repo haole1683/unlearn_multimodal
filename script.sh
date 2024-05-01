@@ -12,7 +12,8 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 ## For Other model version
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 
-
+# stage2 - generate noise from generator
+python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --overwrite
 
 # stage3 - test noise script
 ## 报错。

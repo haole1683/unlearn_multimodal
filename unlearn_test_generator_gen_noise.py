@@ -110,6 +110,14 @@ def generate_noise_from_pretrain(args):
             text_embedding_dim = 1024
         elif clip_model == 'ViT-B/32':
             text_embedding_dim = 512
+        elif clip_model == 'RN101':
+            text_embedding_dim = 512
+        elif clip_model == 'RN50x4':
+            text_embedding_dim = 640
+        elif clip_model == 'ViT-B/16':
+            text_embedding_dim = 512
+        else:
+            raise ValueError("Invalid clip model")
     
     clip_model = clip_model.replace('/','-')
     
@@ -224,10 +232,11 @@ def generate_noise_from_pretrain(args):
     torch.save(noise_dict, os.path.join(all_save_path))
     
     args.tgt_class = origin_tgt_class
-    # gen2()
+    gen2()
 
 def main(args):
-    args.output_dir = os.path.join(args.output_dir, args.dataset)
+    clip_model_str = args.clip_model.replace('/','-')
+    args.output_dir = os.path.join(args.output_dir, clip_model_str, args.dataset)
     if args.overwrite:
         if os.path.exists(args.output_dir):
                 os.system("rm -rf {}".format(args.output_dir))
@@ -238,7 +247,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
-    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all_both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth")
+    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all-RN50x4/checkpoint/generator_best_epoch-92_loss-1.325327332660432.pth")
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/")
     
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])

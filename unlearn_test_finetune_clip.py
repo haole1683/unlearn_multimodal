@@ -27,7 +27,8 @@ from utils import ori_utils
 from utils.data_utils import (
     jsonPoisonDataset, jsonDataset, create_loader, create_sampler, 
     ImageTextDatasetFromSupervisedDataset, ImageTextDatasetFromSupervisedDatasetPoison,
-    ToTensorTrans,  To244TensorTrans, create_simple_loader
+    ToTensorTrans,  To244TensorTrans, To288TensorTrans,
+    create_simple_loader
 )
 from utils.clip_util import (
     clip_normalize
@@ -179,10 +180,17 @@ def main(args=None):
         json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-all-with-index.json"
         
         noise_path = args.noise_path
-        if not args.poisoned:
-            train_dataset = jsonDataset(json_all_path, img_transform = To244TensorTrans, contain_index=False)
+        
+        if args.clip_model == "RN50x4":
+            the_transform = To288TensorTrans
         else:
-            train_dataset = jsonPoisonDataset(json_all_path, noise_path, img_transform = To244TensorTrans, contain_index=False)
+            the_transform = To244TensorTrans
+        
+        if not args.poisoned:
+            train_dataset = jsonDataset(json_all_path, img_transform = the_transform, contain_index=False)
+        else:
+            train_dataset = jsonPoisonDataset(json_all_path, noise_path, img_transform = the_transform, contain_index=False)
+
 
     # experiment 2
     # This is for cifar10 to imageTextDataset
