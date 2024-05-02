@@ -15,6 +15,7 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 # stage2 - generate noise from generator
 python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --dataset=stl10 --gen_which=gen2
 python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --dataset=cifar10
+python unlearn_test_generator_gen_noise.py --device="cuda:0" --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
 
 # stage3 - test noise script
 ## 报错。

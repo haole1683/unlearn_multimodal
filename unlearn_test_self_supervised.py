@@ -233,6 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_batch_size', default=400, type=int)
     parser.add_argument('--pretrain_epoch', default=1000, type=int)
     parser.add_argument('--finetune_epoch', default=200, type=int)
+    parser.add_argument('--test_train_type', default='self_supervised')
     args = parser.parse_args()
 
     main(args)

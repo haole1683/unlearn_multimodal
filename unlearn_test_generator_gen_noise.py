@@ -6,7 +6,7 @@ import clip
 from utils.data_utils import load_class_dataset
 from utils.noise_utils import gen_perturbation
 from utils.clip_util import prompt_templates
-from utils.noise_utils import save_noise
+from utils.noise_utils import save_noise, limit_noise
 from utils.data_utils import jsonDataset
 from utils.os_utils import add_index_to_json_file, create_folder
 
@@ -152,7 +152,9 @@ def generate_noise_from_pretrain(args):
         print(f"Generating noise for tgt class in {args.dataset} tgt class {noise_shape} image")
         
         noise_list = []
-
+        
+        the_fixed_noise = torch.randn(noise_shape).to(args.device)
+        the_fixed_noise = limit_noise(the_fixed_noise)
         for i in tqdm(range(noise_count//noise_shape[0] + 1)):
             z_lantent = z_latent_strategy.getZLatent(noise_shape[0])
             print("The text prompt is ", prompt_Strategy.get_prompt(label_name=the_tgt_class ,update=False))
@@ -161,7 +163,7 @@ def generate_noise_from_pretrain(args):
                 delta_im = gen_perturbation(generator, text_embedding, noise_shape, 
                                             z_latent=z_lantent,evaluate=True, args=args)
             noise_list.append(delta_im)
-
+            delta_im = the_fixed_noise
         noise1 = torch.concat(noise_list)
         noise1 = noise1[:noise_count]
     
@@ -252,7 +254,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
-    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all-RN50x4/checkpoint/generator_best_epoch-92_loss-1.325327332660432.pth")
+    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all-both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth")
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/")
     
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
