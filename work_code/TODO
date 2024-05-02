@@ -1,0 +1,64 @@
+1.增加训练集类别数量，训练更为通用的generator，提高generator的泛化能力
+2.对于Truck类别似乎存疑，需要重新跑该实验
+3.测试unlearnable 效果额外添加一个Self-supervised Learning条件下的测试，典型的 Self-Supervised 方法有SimClr， MAE等等，主要还是就
+Simclr进行实验
+4.有监督训练的数据集可以额外进行拓展，诸如STL-10，ImageNet特定类别。  
+
+
+关于STL-10数据集链接：
+https://blog.csdn.net/OpenDataLab/article/details/126460845?spm=1001.2101.3001.6650.8&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-8-126460845-blog-129176064.235%5Ev43%5Epc_blog_bottom_relevance_base6&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-8-126460845-blog-129176064.235%5Ev43%5Epc_blog_bottom_relevance_base6&utm_relevant_index=14
+
+STL-10已经是从ImageNet中提取的10个类别了。
+
+关于对比学习的代码位置：
+Contrastive Learning代码仓库: /remote-home/songtianwei/research/contrastive_poisoning/contrastive-poisoning
+Transferable Unlearnable Examples: /remote-home/songtianwei/research/TUE/TUE
+
+
+文本指导的对抗样本的生成调研。。
+
+
+unlearn_stage1_train_all_g.py 改为多卡跑。
+
+https://zhuanlan.zhihu.com/p/462453622
+
+注意 unlearn_train_single_class_g的训练过程需要对比其他的infonce的loss，所以损失比较大
+但是 unlearn_stage1_train_all_g 的训练过程 infonce的loss没有额外的输入对比的东西。
+
+https://zhuanlan.zhihu.com/p/462453622
+使用Accelerate
+https://github.com/huggingface/accelerate
+安装成功，但是报错
+
+# 关于指定路径
+https://lianghao.work/archives/accelerate-fen-bu-shi-xun-lian
+
+accelerate configuration saved at /remote-home/songtianwei/.cache/huggingface/accelerate/default_config.yaml  
+
+https://zhuanlan.zhihu.com/p/646635500
+ModuleNotFoundError: No module named 'torch._six'
+https://github.com/InternLM/InternLM/issues/109
+Solution: 改源码
+
+单卡能跑，多卡报错？？？？？？fuck
+solution: https://github.com/huggingface/accelerate/issues/80
+Not work
+solution: https://github.com/InternLM/InternLM/issues/109 
+是的pytorch2.0改了，from torch._six import inf 改成 from torch import inf
+solved !!
+
+solution2: https://github.com/pytorch/pytorch/issues/66504
+Not work
+
+solution3: https://github.com/pytorch/pytorch/issues/73332
+Not work
+傻逼东西草泥马。。。
+
+训练过程中，一个batch的数据，两次 generator forward。。batchnorm会出错。
+解决方案：两次计算loss，两次反向传播更新梯度。
+测试仅使用rn50可以跑。。
+work
+
+new bug:
+RuntimeError: Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed). Saved intermediate values of the graph are freed when you call .backward() or autograd.grad(). Specify retain_graph=True if you need to backward through the graph a second time or if you need to access saved tensors after calling backward.
+..............................nc
