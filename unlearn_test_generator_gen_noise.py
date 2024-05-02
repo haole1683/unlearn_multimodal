@@ -166,8 +166,9 @@ def generate_noise_from_pretrain(args):
         noise1 = noise1[:noise_count]
     
         noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
-
-        tgt_save_path = os.path.join(args.output_dir, f"noise_gen1_{noise_shape_str}_{clip_model}_{the_tgt_class}.pt")
+        the_gen_1_output_dir = os.path.join(args.output_dir, args.dataset)
+        create_folder(the_gen_1_output_dir)
+        tgt_save_path = os.path.join(the_gen_1_output_dir, f"noise_gen1_{noise_shape_str}_{clip_model}_{the_tgt_class}.pt")
         torch.save(noise1.detach().cpu(), tgt_save_path)
         
         return noise1.detach().cpu()
@@ -195,8 +196,10 @@ def generate_noise_from_pretrain(args):
 
         dataset_len = len(tgtClassDs)
         print(f"Total {dataset_len} images in {tgt_class} class dataset")
-        noises2 = torch.rand(dataset_len,3,224,224)
-        noise_shape = (16,3,224,224)
+        # noises2 = torch.rand(dataset_len,3,224,224)
+        noises2 = torch.rand(dataset_len,3,288,288)
+        # noise_shape = (16,3,224,224)
+        noise_shape = (16,3,288,288)
         
         for batch in tqdm(myDataloader):
             img, text, index = batch
@@ -213,30 +216,32 @@ def generate_noise_from_pretrain(args):
         noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
         tgt_save_path = os.path.join(args.output_dir, f"noise_gen2_{noise_shape_str}_{tgt_class}_{clip_model}.pt")
         torch.save(noises2, tgt_save_path)    
-
-    origin_tgt_class = args.tgt_class
-    if origin_tgt_class == 'all':
-        if args.dataset == 'cifar10':
-            tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-        elif args.dataset == 'stl10':
-            tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
-    else:
-        tgt_class_list = [origin_tgt_class]
-    noise_dict = {}
-    for tgt_class in tgt_class_list:
-        print(f"Generate noise for {tgt_class} class")
-        args.tgt_class = tgt_class
-        the_tgt_noise = gen1()
-        noise_dict[tgt_class] = the_tgt_noise
-    all_save_path = os.path.join(args.output_dir, f"noise_gen1_{clip_model}_all.pt")
-    torch.save(noise_dict, os.path.join(all_save_path))
     
-    args.tgt_class = origin_tgt_class
-    gen2()
+    if args.gen_which == 'gen1' or args.gen_which == 'all':
+        origin_tgt_class = args.tgt_class
+        if origin_tgt_class == 'all':
+            if args.dataset == 'cifar10':
+                tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+            elif args.dataset == 'stl10':
+                tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
+        else:
+            tgt_class_list = [origin_tgt_class]
+        noise_dict = {}
+        for tgt_class in tgt_class_list:
+            print(f"Generate noise for {tgt_class} class")
+            args.tgt_class = tgt_class
+            the_tgt_noise = gen1()
+            noise_dict[tgt_class] = the_tgt_noise
+        all_save_path = os.path.join(args.output_dir, f"noise_gen1_{clip_model}_all.pt")
+        torch.save(noise_dict, os.path.join(all_save_path))
+        
+        args.tgt_class = origin_tgt_class
+    if args.gen_which == 'gen2' or args.gen_which == 'all':
+        gen2()
 
 def main(args):
     clip_model_str = args.clip_model.replace('/','-')
-    args.output_dir = os.path.join(args.output_dir, clip_model_str, args.dataset)
+    args.output_dir = os.path.join(args.output_dir, clip_model_str)
     if args.overwrite:
         if os.path.exists(args.output_dir):
                 os.system("rm -rf {}".format(args.output_dir))
@@ -253,6 +258,7 @@ if __name__ == '__main__':
     parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
+    parser.add_argument('--gen_which', default='both', choices=['gen1', 'gen2', 'all'])
     # generate noise hyper parameter
     # Here, z freq means the frequency of updating z (generator latent input)
     # if 1 , then every batch update z_input

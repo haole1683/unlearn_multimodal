@@ -57,8 +57,11 @@ class jsonRecord:
         self.data['experiment_result'].append(exp_res)
         self.save()
 
-def evalutate(model):
-    test_cifar_10_result = test_zero_shot(model)
+def evalutate(model, clip_model_str):
+    if clip_model_str == "RN50x4":
+        test_cifar_10_result = test_zero_shot(model, clip_version='RN50x4')
+    else:
+        test_cifar_10_result = test_zero_shot(model)
     return test_cifar_10_result
 
 def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
@@ -212,7 +215,7 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(model)
+        result = evalutate(model, args.clip_model)
         result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")

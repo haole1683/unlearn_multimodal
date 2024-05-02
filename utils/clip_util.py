@@ -23,7 +23,7 @@ def _transform(n_px):
 
 
 # [224,224]
-clip_transform = transforms.Compose([
+clip_transform_224 = transforms.Compose([
     Resize((224,224),interpolation=BICUBIC),
     CenterCrop(224),
     _convert_image_to_rgb,
@@ -33,6 +33,13 @@ clip_transform = transforms.Compose([
 clip_transform_256 = transforms.Compose([
     Resize((256,256),interpolation=BICUBIC),
     CenterCrop(256),
+    _convert_image_to_rgb,
+    ToTensor(),
+])
+
+clip_transform_288 = transforms.Compose([
+    Resize((288,288),interpolation=BICUBIC),
+    CenterCrop(288),
     _convert_image_to_rgb,
     ToTensor(),
 ])

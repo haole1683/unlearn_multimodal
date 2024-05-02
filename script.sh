@@ -13,9 +13,10 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 
 # stage2 - generate noise from generator
-python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --overwrite
+python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --dataset=stl10 --gen_which=gen2
+python unlearn_test_generator_gen_noise.py --clip_model=RN50x4 --device=cuda:0 --dataset=cifar10
 
 # stage3 - test noise script
 ## 报错。
-python unlearn_test_finetune_clip.py --device="cuda:0" --clip_model=RN50x4
-python unlearn_test_finetune_clip.py --device="cuda:1" --clip_model=RN50x4 --poisoned
+python unlearn_test_finetune_clip.py --device="cuda:0" --clip_model=RN50x4 --batch_size=16
+python unlearn_test_finetune_clip.py --device="cuda:1" --clip_model=RN50x4 --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt"
