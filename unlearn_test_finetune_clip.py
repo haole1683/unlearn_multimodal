@@ -268,7 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage3_test_clip/")
     
     # noise
-    parser.add_argument('--noise_path', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/noise_gen2_46221-3-224-224_all_both.pt")
+    parser.add_argument('--noise_path', default="output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     

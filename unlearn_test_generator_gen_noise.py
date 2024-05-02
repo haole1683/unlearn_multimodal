@@ -153,8 +153,9 @@ def generate_noise_from_pretrain(args):
         
         noise_list = []
         
+        # TODO: delete the limit noise
         the_fixed_noise = torch.randn(noise_shape).to(args.device)
-        the_fixed_noise = limit_noise(the_fixed_noise)
+        the_fixed_noise = limit_noise(the_fixed_noise, epsilon=128)
         for i in tqdm(range(noise_count//noise_shape[0] + 1)):
             z_lantent = z_latent_strategy.getZLatent(noise_shape[0])
             print("The text prompt is ", prompt_Strategy.get_prompt(label_name=the_tgt_class ,update=False))
@@ -198,10 +199,10 @@ def generate_noise_from_pretrain(args):
 
         dataset_len = len(tgtClassDs)
         print(f"Total {dataset_len} images in {tgt_class} class dataset")
-        # noises2 = torch.rand(dataset_len,3,224,224)
-        noises2 = torch.rand(dataset_len,3,288,288)
-        # noise_shape = (16,3,224,224)
-        noise_shape = (16,3,288,288)
+        noises2 = torch.rand(dataset_len,3,224,224)
+        # noises2 = torch.rand(dataset_len,3,288,288)
+        noise_shape = (16,3,224,224)
+        # noise_shape = (16,3,288,288)
         
         for batch in tqdm(myDataloader):
             img, text, index = batch

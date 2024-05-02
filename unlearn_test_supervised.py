@@ -189,7 +189,7 @@ def main(args):
         train_dataset = poison_train_dataset
     else:
         noise = torch.load(args.noise_path, map_location=args.device)
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
+        # poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     

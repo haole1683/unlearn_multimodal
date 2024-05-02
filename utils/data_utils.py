@@ -159,9 +159,9 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
             # print(unlearnable_train_dataset.data[i])
             # print(unlearnable_train_dataset.data[i].shape)
             if the_noise.shape[0] != unlearnable_train_dataset.data[i].shape[0]:
-                perturb_noise = the_noise.mul(255).clamp_(0, 255).permute(1, 2, 0).to('cpu').numpy()
+                perturb_noise = the_noise.mul(255).clamp_(-255, 255).permute(1, 2, 0).to('cpu').numpy()
             else:
-                perturb_noise = the_noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+                perturb_noise = the_noise.mul(255).clamp_(-255, 255).to('cpu').numpy()
             noise_dict_cnt[label_name] += 1
             unlearnable_train_dataset.data[i] += perturb_noise
             unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
@@ -251,13 +251,13 @@ class jsonPoisonDataset(Dataset):
         if self.img_transform:
             img = self.img_transform(img)
         
-        if label_class == 'cat':
-            the_noise_index = index % len(self.noise_list)
-            the_noise = self.noise_list[the_noise_index]
-            the_noise = the_noise.to(img.device)
-            the_img = torch.clamp(img + the_noise, min=0, max=1)
-        else:
-            the_img = img
+        # if label_class == 'cat':
+        the_noise_index = index % len(self.noise_list)
+        the_noise = self.noise_list[the_noise_index]
+        the_noise = the_noise.to(img.device)
+        the_img = torch.clamp(img + the_noise, min=0, max=1)
+        # else:
+            # the_img = img
             
         if self.contain_index:
             return the_img, text, index
