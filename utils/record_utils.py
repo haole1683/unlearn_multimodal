@@ -147,3 +147,25 @@ class RecordSupervised(object):
     
     def get_result(self):
         return self.result
+    
+class jsonRecord:
+    def __init__(self, path):
+        self.data = {}
+        self.path = path
+        
+    def add(self, key, value):
+        self.data[key] = value
+        
+    def save(self):
+        with open(self.path, 'w') as f:
+            json.dump(self.data, f)
+            
+    def save_args(self, args):
+        self.data['args'] = vars(args)
+        self.save()
+    
+    def save_exp_res(self, exp_res : dict):
+        if 'experiment_result' not in self.data:
+            self.data['experiment_result'] = []
+        self.data['experiment_result'].append(exp_res)
+        self.save()
