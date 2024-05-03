@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evaluate=False,args=None):
-    batch_size = noise_shape[0]
+    batch_size = text_embedding.shape[0]
     sec_emb = text_embedding
     if evaluate:
         generator.eval()

@@ -180,8 +180,8 @@ def main(args=None):
     #### Dataset #### 
     # experiment 1
     if finetune_dataset == "myLaion":
-        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-truck.json"
-        json_all_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-all-with-index.json"
+        json_path = "./data/laion-truck.json"
+        json_all_path = "./data/laion-all-with-index.json"
         
         noise_path = args.noise_path
         
@@ -199,7 +199,7 @@ def main(args=None):
     # experiment 2
     # This is for cifar10 to imageTextDataset
     elif finetune_dataset == "cifar10":
-        noise_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/truck_noise_RN50.pt"
+        noise_path = "./output/train_g_unlearn/truck_noise_RN50.pt"
         if not args.poisoned:
             train_dataset = ImageTextDatasetFromSupervisedDataset("CIFAR10", 'train', transform=To244TensorTrans)
         else:
@@ -226,7 +226,7 @@ def main(args=None):
         
         if distributed_utils.is_main_process():  
             # save the model to local
-            tgt_path = "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_finetune_clip"
+            tgt_path = "./output/unlearn_finetune_clip"
             clip_version = args.clip_model.replace('/','_')
             if args.poisoned:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch_{epoch}.pth"))
@@ -266,10 +266,10 @@ if __name__ == '__main__':
 
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage3_test_clip/")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip/")
     
     # noise
-    parser.add_argument('--noise_path', default="output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt")
+    parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     

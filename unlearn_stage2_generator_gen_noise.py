@@ -3,7 +3,7 @@ from torchvision import transforms
 
 import clip
 
-from utils.data_utils import load_class_dataset
+from utils.data_utils import load_class_dataset, To244TensorTrans
 from utils.noise_utils import gen_perturbation
 from utils.clip_util import prompt_templates
 from utils.noise_utils import save_noise, limit_noise
@@ -16,11 +16,6 @@ from models.model_gan_generator import NetG
 from tqdm import tqdm
 import os
 import argparse
-
-myTrans = transforms.Compose([
-    # transforms.Resize((224,224)),
-    transforms.ToTensor()
-])
 
 class zLatentStrategy():
     def __init__(self, update_freq=100) -> None:
@@ -98,26 +93,27 @@ def generate_noise_from_pretrain(args):
     # Generate noise for cifar-10 Cat class
     clip_model = args.clip_model
     if clip_model == 'both':
-        text_embedding_dim = 512   
-        model, _ = clip.load("RN101", args.device, jit=False)
+        text_embedding_dim = 512
+        # model, _ = clip.load("RN50", args.device, jit=False)   
+        model, _ = clip.load(clip_model, args.device, jit=False)
         model = model.float()
         model = model.to(args.device)  
     else:
         model, _ = clip.load(clip_model, args.device, jit=False)
         model = model.float()
         model = model.to(args.device)  
-        if clip_model == 'RN50':
-            text_embedding_dim = 1024
-        elif clip_model == 'ViT-B/32':
-            text_embedding_dim = 512
-        elif clip_model == 'RN101':
-            text_embedding_dim = 512
-        elif clip_model == 'RN50x4':
-            text_embedding_dim = 640
-        elif clip_model == 'ViT-B/16':
-            text_embedding_dim = 512
-        else:
-            raise ValueError("Invalid clip model")
+    if clip_model == 'RN50':
+        text_embedding_dim = 1024
+    elif clip_model == 'ViT-B/32':
+        text_embedding_dim = 512
+    elif clip_model == 'RN101':
+        text_embedding_dim = 512
+    elif clip_model == 'RN50x4':
+        text_embedding_dim = 640
+    elif clip_model == 'ViT-B/16':
+        text_embedding_dim = 512
+    else:
+        raise ValueError("Invalid clip model")
     
     clip_model = clip_model.replace('/','-')
     
@@ -132,10 +128,9 @@ def generate_noise_from_pretrain(args):
         generator.load_state_dict(checkpoint)
     generator.eval()
     
-    # Here noise is over random, so here's a strategy
-    z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
-    
     def gen1():
+        # Here noise is over random, so here's a strategy
+        z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
         the_tgt_class = args.tgt_class
         prompt_Strategy = promptStrategy(strategy=args.text_prompt_stragegy, tokenizer=clip.tokenize, text_encoder=model, label_word=the_tgt_class)
         test_dataset = args.dataset
@@ -153,9 +148,8 @@ def generate_noise_from_pretrain(args):
         
         noise_list = []
         
-        # TODO: delete the limit noise
-        the_fixed_noise = torch.randn(noise_shape).to(args.device)
-        the_fixed_noise = limit_noise(the_fixed_noise, epsilon=128)
+        # the_fixed_noise = torch.randn(noise_shape).to(args.device)
+        # the_fixed_noise = limit_noise(the_fixed_noise, epsilon=128)
         for i in tqdm(range(noise_count//noise_shape[0] + 1)):
             z_lantent = z_latent_strategy.getZLatent(noise_shape[0])
             print("The text prompt is ", prompt_Strategy.get_prompt(label_name=the_tgt_class ,update=False))
@@ -164,7 +158,7 @@ def generate_noise_from_pretrain(args):
                 delta_im = gen_perturbation(generator, text_embedding, noise_shape, 
                                             z_latent=z_lantent,evaluate=True, args=args)
             noise_list.append(delta_im)
-            delta_im = the_fixed_noise
+            # delta_im = the_fixed_noise
         noise1 = torch.concat(noise_list)
         noise1 = noise1[:noise_count]
     
@@ -178,40 +172,37 @@ def generate_noise_from_pretrain(args):
     
     tokenizer = clip.tokenize
     def gen2():
+        # Here noise is over random, so here's a strategy
+        z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
         # Generator noise for tgt_class class dataset image-pair dataset
         tgt_class = args.tgt_class
         print(f"Generating noise for {tgt_class} class in {tgt_class} class image-pair dataset [3,224,224] image")
         
-        json_tgt_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}-with-index.json"
+        json_tgt_path = f"./data/laion-{tgt_class}-with-index.json"
             
         if not os.path.exists(json_tgt_path):
             # add index for the json file
-            json_tgt_no_index_path = f"/remote-home/songtianwei/research/unlearn_multimodal/data/laion-{tgt_class}.json"
+            json_tgt_no_index_path = f"./data/laion-{tgt_class}.json"
             add_index_to_json_file(json_tgt_no_index_path)
-            
-        myTrans = transforms.Compose([
-            transforms.Resize((224,224)),
-            transforms.ToTensor()
-        ])
 
-        tgtClassDs = jsonDataset(json_tgt_path, img_transform = myTrans, contain_index=True)
+        tgtClassDs = jsonDataset(json_tgt_path, img_transform = To244TensorTrans, contain_index=True)
         myDataloader = DataLoader(tgtClassDs, batch_size=16, shuffle=True,drop_last=True)
 
         dataset_len = len(tgtClassDs)
         print(f"Total {dataset_len} images in {tgt_class} class dataset")
         noises2 = torch.rand(dataset_len,3,224,224)
         # noises2 = torch.rand(dataset_len,3,288,288)
-        noise_shape = (16,3,224,224)
+        noise_shape = (3,224,224)
         # noise_shape = (16,3,288,288)
         
         for batch in tqdm(myDataloader):
             img, text, index = batch
             text = tokenizer(text, truncate=True).to(args.device)
             text_embedding = model.encode_text(text)
-            z_lantent = z_latent_strategy.getZLatent(text.shape[0])
+            z_latent = z_latent_strategy.getZLatent(text.shape[0])
             with torch.no_grad():
                 delta_im = gen_perturbation(generator, text_embedding, noise_shape,
-                                            z_lantent,evaluate=True, args=args)
+                                            z_latent,evaluate=True, args=args)
             index = index % dataset_len
             noises2[index] = delta_im.detach().cpu()
             
@@ -220,25 +211,35 @@ def generate_noise_from_pretrain(args):
         tgt_save_path = os.path.join(args.output_dir, f"noise_gen2_{noise_shape_str}_{tgt_class}_{clip_model}.pt")
         torch.save(noises2, tgt_save_path)    
     
+    # For gen1
     if args.gen_which == 'gen1' or args.gen_which == 'all':
+        origin_dataset = args.dataset
         origin_tgt_class = args.tgt_class
-        if origin_tgt_class == 'all':
-            if args.dataset == 'cifar10':
-                tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-            elif args.dataset == 'stl10':
-                tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
+        if origin_dataset == 'all':
+            dataset_list = ['cifar10', 'stl10']
         else:
-            tgt_class_list = [origin_tgt_class]
-        noise_dict = {}
-        for tgt_class in tgt_class_list:
-            print(f"Generate noise for {tgt_class} class")
-            args.tgt_class = tgt_class
-            the_tgt_noise = gen1()
-            noise_dict[tgt_class] = the_tgt_noise
-        all_save_path = os.path.join(args.output_dir, f"noise_gen1_{clip_model}_all.pt")
-        torch.save(noise_dict, os.path.join(all_save_path))
-        
+            dataset_list = [origin_dataset]
+        for dataset in dataset_list:
+            args.dataset = dataset
+            if origin_tgt_class == 'all':
+                if args.dataset == 'cifar10':
+                    tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+                elif args.dataset == 'stl10':
+                    tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
+            else:
+                tgt_class_list = [origin_tgt_class]
+            noise_dict = {}
+            for tgt_class in tgt_class_list:
+                print(f"Generate noise for {tgt_class} class")
+                args.tgt_class = tgt_class
+                the_tgt_noise = gen1()
+                noise_dict[tgt_class] = the_tgt_noise
+            all_save_path = os.path.join(args.output_dir,args.dataset, f"noise_gen1_{clip_model}_{args.dataset}_all.pt")
+            torch.save(noise_dict, os.path.join(all_save_path))
+        args.dataset = origin_dataset
         args.tgt_class = origin_tgt_class
+    
+    # For gen2
     if args.gen_which == 'gen2' or args.gen_which == 'all':
         gen2()
 
@@ -254,21 +255,21 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:1')
-    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
-    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen_all-both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth")
-    parser.add_argument('--output_dir', default="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/")
+    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen_all-both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise/")
     
-    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='RN101', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--gen_which', default='both', choices=['gen1', 'gen2', 'all'])
+    parser.add_argument('--gen_which', default='all', choices=['gen1', 'gen2', 'all'])
     # generate noise hyper parameter
     # Here, z freq means the frequency of updating z (generator latent input)
     # if 1 , then every batch update z_input
-    parser.add_argument('--update_z_freq', default=1000, type=int, help="Update z frequency")
+    parser.add_argument('--update_z_freq', default=10000000, type=int, help="Update z frequency")
     # strategy for text prompt, random, fixed, poll
     # total 20 template for text prompt
-    parser.add_argument('--text_prompt_stragegy', default='random', choices=['random', 'fixed', 'poll'])
+    parser.add_argument('--text_prompt_stragegy', default='fixed', choices=['random', 'fixed', 'poll'])
     
     parser.add_argument('--noise_shape', default=(3,224,224), type=tuple)
     args = parser.parse_args()

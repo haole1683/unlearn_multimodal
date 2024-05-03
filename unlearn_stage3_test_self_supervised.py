@@ -220,8 +220,8 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= '/remote-home/songtianwei/research/unlearn_multimodal/output/train_g_unlearn/cat_noise.pt')
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_self_supervised')
+    parser.add_argument('--noise_path', default= './output/train_g_unlearn/cat_noise.pt')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_self_supervised')
     
     # training settings
     parser.add_argument('--distributed', action='store_true')   # 采用多卡训练

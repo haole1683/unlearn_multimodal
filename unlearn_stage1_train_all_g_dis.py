@@ -16,14 +16,14 @@ from dataset import create_dataset, create_sampler, create_loader, normalize_fn
 from models.model_gan_generator import NetG
 
 from utils.metrics_utils import InfoNCE
-from utils.data_utils import (
-    load_dataset, jsonDataset,
-    augmentations_kornia
-)
 from utils.patch_utils import de_normalize
 from utils.noise_utils import gen_perturbation
-from utils.clip_util import _convert_image_to_rgb, clip_transform, clip_normalize, prompt_templates, zeroshot_classifier
+from utils.clip_util import clip_normalize
 from utils.record_utils import setup_logging
+from utils.data_utils import (
+    jsonDataset, To244TensorTrans, To288TensorTrans,
+    augmentations_kornia
+)
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -294,26 +294,17 @@ def main(args):
         myJsonRecord = jsonRecord(os.path.join(args.output_dir, "json/exp_record.json"))
         myJsonRecord.save_args(args)
         
-    clip_version = args.clip_model
-    myTrans224 = transforms.Compose([
-        transforms.Resize((224,224)),
-        transforms.ToTensor()
-    ])
-    
-    myTrans288 = transforms.Compose([
-        transforms.Resize((288,288)),
-        transforms.ToTensor()
-    ])
-    
-    if clip_version == 'RN50x4':
-        myTrans = myTrans288
+
+    if args.clip_model == 'RN50x4':
+        myTrans = To288TensorTrans
     else:
-        myTrans = myTrans224 
+        myTrans = To244TensorTrans 
     trainDataset = jsonDataset(json_path, img_transform = myTrans, contain_index=True)
     trainDataloader = DataLoader(trainDataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
 
     # clip
     device = "cpu"
+    clip_version = args.clip_model
     if clip_version == 'both':
         clip_model_resnet,_ = clip.load("RN101", device, jit=False)
         clip_model_vit,_ = clip.load("ViT-B/16", device, jit=False)
@@ -337,7 +328,6 @@ def main(args):
     # generator
     text_embedding_dim = clip_models[0].text_projection.shape[1]
     generator = NetG(ngf=text_embedding_dim//8)
-    # generator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(generator)
     generator.train()
 
     # optimizer
@@ -394,7 +384,7 @@ if __name__ == '__main__':
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn')
     parser.add_argument('--overwrite', action='store_true')
     
     args = parser.parse_args()
