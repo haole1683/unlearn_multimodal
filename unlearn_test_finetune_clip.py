@@ -168,7 +168,8 @@ def main(args=None):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-6, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    lr = 1e-4  # ori 1e-6
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
