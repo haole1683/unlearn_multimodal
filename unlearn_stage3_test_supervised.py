@@ -14,7 +14,8 @@ from utils.noise_utils import (
 )
 from utils.record_utils import (
     record_result_supervised, AverageMeter,
-    RecordSupervised
+    RecordSupervised,
+    jsonRecord
 )
 from utils.os_utils import (
     create_folder
@@ -139,7 +140,8 @@ def test_supervised(trainDataset, testDataset, args):
             tqdm.write(f'{k}: {v["correct_rate"]:.2f}', end=' ')
         tqdm.write('\n')
     
-    myRecord.save_result(args.result_save_path)
+    # myRecord.save_result(args.result_save_path)
+    return myRecord.get_result()
 
 
 
@@ -207,16 +209,20 @@ def main(args):
     args.result_save_path = result_save_path
     
     result = test_supervised(train_dataset, test_dataset, args)
+    myJsonRecord = jsonRecord(os.path.join(result_save_path, "result.json"))
+    myJsonRecord.save_args(args)
+    myJsonRecord.save_exp_res(result)
+    
         
     
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:3')
-    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10'])
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/both/noise_gen1_both_all.pt')
-    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_noise/')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/stl10/noise_gen1_ViT-B-16_stl10_all.pt')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_noise_temp2/')
     
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     # For train  

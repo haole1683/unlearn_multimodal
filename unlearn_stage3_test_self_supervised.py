@@ -19,6 +19,9 @@ from utils.data_utils import (
 from utils.os_utils import (
     create_folder, join_path, record_result
 )
+from utils.record_utils import (
+    jsonRecord
+)
 from utils.ue_util import AverageMeter
 from tqdm import tqdm
 import json
@@ -62,7 +65,7 @@ def train_pretrain(train_dataset, args):
         with open(os.path.join(save_path, "stage1_loss.txt"), "a") as f:
             f.write(str(total_loss/len(train_dataset)*batch_size) + " ")
 
-        if epoch % 10==0:
+        if epoch % 100 ==0:
             torch.save(model.state_dict(), os.path.join(save_path, 'model_stage1_epoch' + str(epoch) + '.pth'))
 
 
@@ -120,7 +123,7 @@ def train_finetune(args):
         with open(os.path.join(save_path, "stage2_loss.txt"), "a") as f:
             f.write(str(total_loss / len(train_dataset)* batch_size) + " ")
 
-        if epoch % 5==0:
+        if epoch % 10 ==0:
             torch.save(model.state_dict(), os.path.join(save_path, 'model_stage2_epoch' + str(epoch) + '.pth'))
 
             model.eval()
@@ -195,44 +198,47 @@ def main(args):
         train_dataset = ContrastivePairDataset(args.dataset, contrastive_transform = contrastive_train_transform)
         args.output_dir = join_path(args.output_dir, 'natural')
     
-    
+    args.output_dir = join_path(args.output_dir, args.dataset)
+    # set the output_dir string
     stage1_result_path = f'{args.output_dir}/stage1/'
     create_folder(stage1_result_path)
-    stage2_result_path = f'{args.output_dir}/stage2_new/'
+    stage2_result_path = f'{args.output_dir}/stage2/'
     create_folder(stage2_result_path)
     
     args.stage1_path = stage1_result_path
     args.stage2_path = stage2_result_path
     
+    myJsonRecord = jsonRecord(stage2_result_path)
+    myJsonRecord.save_args(args)
+    
     if args.stage == 'stage1' or args.stage == 'all':
         train_pretrain(train_dataset, args)
     if args.stage == 'stage2' or args.stage == 'all':
         result = train_finetune(args)
-        result_save_path = stage2_result_path
         
-        create_folder(result_save_path)
-        record_result(result, result_save_path)
+        myJsonRecord.save_exp_res(result)
+        # record_result(result, result_save_path)
     
     pass
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:0')
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
+    parser.add_argument('--device', default='cuda:2')
+    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/train_g_unlearn/cat_noise.pt')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt')
     parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_self_supervised')
     
     # training settings
     parser.add_argument('--distributed', action='store_true')   # 采用多卡训练
     # training stage
-    parser.add_argument('--stage', default='stage2', choices=['all','stage1','stage2'])
+    parser.add_argument('--stage', default='all', choices=['all','stage1','stage2'])
 
     # training config
-    parser.add_argument('--pretrain_batch_size', default=400, type=int)
-    parser.add_argument('--finetune_batch_size', default=400, type=int)
-    parser.add_argument('--pretrain_epoch', default=1000, type=int)
-    parser.add_argument('--finetune_epoch', default=200, type=int)
+    parser.add_argument('--pretrain_batch_size', default=400, type=int)  # default: 400
+    parser.add_argument('--finetune_batch_size', default=400, type=int)  # default: 400
+    parser.add_argument('--pretrain_epoch', default=1000, type=int) # default: 1000
+    parser.add_argument('--finetune_epoch', default=200, type=int)  # default: 200
     parser.add_argument('--test_train_type', default='self_supervised')
     args = parser.parse_args()
 

@@ -146,7 +146,7 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
     # print(class_to_idx_dict)
     
     if target_poison_class_name == 'all':
-        print('addding noise to the dataset - all')
+        print('adding noise to the dataset - all')
         unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
         noise_dict_cnt = {class_name:0 for class_name in unlearnable_train_dataset.classes}
         for i in range(len(unlearnable_train_dataset)):
@@ -190,7 +190,7 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
         raise ValueError("The shape of noise is not equal to the shape of image.")
     
     
-    perturb_noise = perturb_noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+    perturb_noise = perturb_noise.mul(255).clamp_(-255, 255).to('cpu').numpy()
     # perturb_noise = noise.mul(255).clamp_(0, 255).to('cpu').numpy()
     
     unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
@@ -409,11 +409,23 @@ class ContrastivePairDataset(Dataset):
         self.contrastive_transform = contrastive_transform
         self.target_transform = target_transform
         
+        if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+            self.class_to_idx_dict = self.supervised_train_dataset.class_to_idx
+            self.train_lables = self.supervised_train_dataset.targets
+        elif dataset_name == 'stl10' or dataset_name == 'STL10':
+            self.class_to_idx_dict = {
+                "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+            }
+            self.train_lables = self.supervised_train_dataset.labels
+        
     def __len__(self):
         return len(self.supervised_train_dataset)
     
     def __getitem__(self, index):
-        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img, target= self.supervised_train_dataset.data[index],  self.train_lables[index]
+        
+        if img.shape[0] == 3:
+            img = np.transpose(img, (1, 2, 0))
         img = Image.fromarray(img)
 
         if self.contrastive_transform is not None:
@@ -429,15 +441,27 @@ class ContrastivePairPoisonDataset(Dataset):
     
     def __init__(self, dataset_name, noise, contrastive_transform=None ,train_transform=None, test_transform=None, target_transform=None) -> None:
         super().__init__()
-        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, noise, train_transform, test_transform)
+        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, 
+                                                                                          noise,target_poison_class_name='all', train_transform=train_transform, test_transform=test_transform)
         self.contrastive_transform = contrastive_transform
         self.target_transform = target_transform
         
+        if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+            self.class_to_idx_dict = self.supervised_train_dataset.class_to_idx
+            self.train_lables = self.supervised_train_dataset.targets
+        elif dataset_name == 'stl10' or dataset_name == 'STL10':
+            self.class_to_idx_dict = {
+                "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+            }
+            self.train_lables = self.supervised_train_dataset.labels
     def __len__(self):
         return len(self.supervised_train_dataset)
     
     def __getitem__(self, index):
-        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img, target= self.supervised_train_dataset.data[index], self.train_lables[index]
+        if img.shape[0] == 3:
+            img = np.transpose(img, (1, 2, 0))
+            
         img = Image.fromarray(img)
 
         if self.contrastive_transform is not None:

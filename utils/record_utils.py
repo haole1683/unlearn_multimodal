@@ -151,7 +151,14 @@ class RecordSupervised(object):
 class jsonRecord:
     def __init__(self, path):
         self.data = {}
+        
+        # if path is a dictionary , concat result.json
+        if os.path.isdir(path):
+            path = os.path.join(path, 'result.json')
+            if os.path.exists(path):
+                os.remove(path)
         self.path = path
+        
         
     def add(self, key, value):
         self.data[key] = value
@@ -164,8 +171,8 @@ class jsonRecord:
         self.data['args'] = vars(args)
         self.save()
     
-    def save_exp_res(self, exp_res : dict):
+    def save_exp_res(self, exp_res : list):
         if 'experiment_result' not in self.data:
-            self.data['experiment_result'] = []
-        self.data['experiment_result'].append(exp_res)
+            self.data['experiment_result'] = exp_res
+        # self.data['experiment_result'].append(exp_res)
         self.save()
