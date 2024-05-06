@@ -27,7 +27,7 @@ python unlearn_stage2_generator_gen_noise.py --device='cuda:2' --clip_model=RN50
 
 
 # stage3 - test noise script
-## 报错。
+## image-text-pair training for finetune clip model
 python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=RN50x4 --batch_size=16
 python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=RN50x4 --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt"
 ## self-supervised model
@@ -35,3 +35,8 @@ python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda
 python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt"
 python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:2'
 python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/stl10/noise_gen1_ViT-B-16_stl10_all.pt"
+## supervised model
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' 
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned
+python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2'
+python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --poisoned

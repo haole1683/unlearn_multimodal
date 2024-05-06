@@ -41,7 +41,7 @@ def train_pretrain(train_dataset, args):
 
     model = SimCLRStage1().to(DEVICE)
     lossLR= Loss().to(DEVICE)
-    optimizer=torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
+    optimizer=torch.optim.Adam(model.parameters(), lr=args.finetune_lr, weight_decay=1e-6)
 
     for epoch in range(1,max_epoch+1):
         model.train()
@@ -89,7 +89,7 @@ def train_finetune(args):
     model = SimCLRStage2(num_class=len(train_dataset.classes)).to(device)
     model.load_state_dict(torch.load(pretrain_path, map_location='cpu'),strict=False)
     loss_criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.fc.parameters(), lr=1e-3, weight_decay=1e-6)
+    optimizer = torch.optim.Adam(model.fc.parameters(), lr=args.finetune_lr, weight_decay=1e-6)
 
     result = []
     
@@ -239,6 +239,9 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_batch_size', default=400, type=int)  # default: 400
     parser.add_argument('--pretrain_epoch', default=1000, type=int) # default: 1000
     parser.add_argument('--finetune_epoch', default=200, type=int)  # default: 200
+    parser.add_argument('--pretrain_lr', default=1e-3, type=float)  # default: 1e-3
+    parser.add_argument('--finetune_lr', default=1e-3, type=float)  # default: 1e-3
+    
     parser.add_argument('--test_train_type', default='self_supervised')
     args = parser.parse_args()
 

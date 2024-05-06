@@ -57,7 +57,8 @@ def test_supervised(trainDataset, testDataset, args):
     
     model = model.to(device)
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(params=model.parameters(), lr=0.1, weight_decay=0.0005, momentum=0.9)
+    lr = args.lr
+    optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=0.0005, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0)
     
     if hasattr(trainDataset, 'class_to_idx'):
@@ -221,12 +222,13 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:3')
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/stl10/noise_gen1_ViT-B-16_stl10_all.pt')
-    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_noise_temp2/')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
     
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     # For train  
     parser.add_argument('--max_epoch', default=40, type=int)
+    parser.add_argument('--lr', default=0.1, type=float)
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')

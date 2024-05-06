@@ -168,8 +168,7 @@ def main(args=None):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    lr = 1e-4  # ori 1e-6
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
@@ -258,7 +257,10 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action="store_true")
     parser.add_argument('--poisoned', action="store_true")
     parser.add_argument('--finetune_dataset', default='myLaion')
+    
+    # training
     parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--lr', default=1e-4, type=float)
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
