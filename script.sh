@@ -9,11 +9,17 @@ python unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwri
 
 
 # stage1 - train generator script 
-## For RN50*4, the batch size need half(25G memory)
+## For Single model RN50*4, the batch size need half(25G memory)
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50x4 --trainset=all --batch_size=16 --overwrite
-## For Other model version
+## For Single model version - RN50 - Doing
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50 --trainset=all --batch_size=8 --overwrite 
-## For both model version(RN101 + ViT-B/16)
+## For Single model version - ViT-B/16
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=ViT-B/16 --trainset=all --batch_size=8 --overwrite 
+## For Single model version - ViT-B/32
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=ViT-B/32 --trainset=all --batch_size=8 --overwrite 
+## For both model version(RN101 + ViT-B/16) - Done
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
+## For both model version(RN101 + ViT-B/32) 
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 
 
