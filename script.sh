@@ -28,8 +28,8 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 # text_prompt set fixed , use fixed text prompt
 # gen1 : generate noise for supervised model
 # gen2 : generate noise for myLaion dataset
-python unlearn_stage2_generator_gen_noise.py --device='cuda:0' --clip_model=ViT-B/16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
-python unlearn_stage2_generator_gen_noise.py --device='cuda:2' --clip_model=RN50 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:0' --clip_model=RN50 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:2' --clip_model=ViT-B/16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
 
 
 # stage3 - test noise script
