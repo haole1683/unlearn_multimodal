@@ -137,6 +137,11 @@ def main(args=None):
     #### Model #### 
     logging.info("Creating model")
     model, _ = clip.load(args.clip_model, device, jit=False)
+    
+    if args.from_scratch:
+        #### random init the model parameter
+        for param in model.parameters():
+            param.data = torch.randn_like(param.data) * 0.01
     model = model.float()
     
     tokenizer = clip.tokenize
@@ -265,7 +270,8 @@ if __name__ == '__main__':
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
-
+    parser.add_argument('--from_scratch', action='store_true', help="train from scratch")
+    
     # config overload
     parser.add_argument('--overload_config', action='store_true')
     parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip/")
@@ -275,8 +281,16 @@ if __name__ == '__main__':
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     
+    if args.from_scratch:
+        args.output_dir = os.path.join(args.output_dir, "from_scratch")
+    else:
+        args.output_dir = os.path.join(args.output_dir, "from_pretrain")
+    
     if args.poisoned:
         args.output_dir = os.path.join(args.output_dir, "poisoned")
+        noise_path = args.noise_path
+        noise_clip_version = noise_path.split('/')[-2]
+        args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
     else:
         args.output_dir = os.path.join(args.output_dir, "natural")
     clip_model_str = args.clip_model.replace('/','_')

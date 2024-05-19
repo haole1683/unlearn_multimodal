@@ -22,7 +22,6 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 ## For both model version(RN101 + ViT-B/32) 
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 
-
 # stage2 - generate noise from generator
 # Note: update_z_fre set max, not update z
 # text_prompt set fixed , use fixed text prompt
@@ -34,8 +33,11 @@ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_
 
 # stage3 - test noise script
 ## image-text-pair training for finetune clip model
-python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=RN50x4 --batch_size=16
-python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=RN50x4 --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/both/noise_gen2_46221-3-224-224_all_both.pt"
+python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=RN50 --batch_size=256
+python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=RN50 --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
+## For from scratch
+python unlearn_stage3_test_finetune_clip.py --device="cuda:2" --clip_model=RN50 --batch_size=256 --from_scratch --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
+
 ## self-supervised model
 python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda:0'
 python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt"
@@ -46,3 +48,4 @@ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0'
 python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned
 python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2'
 python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --poisoned
+

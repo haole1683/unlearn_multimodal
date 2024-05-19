@@ -233,6 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', action='store_true')   # 采用多卡训练
     # training stage
     parser.add_argument('--stage', default='all', choices=['all','stage1','stage2'])
+    parser.add_argument('--clip_model', default='ViT-B-16', choices=['ViT-B-16', 'ViT-B-32', 'ViT-L-16', 'ViT-L-32'])
 
     # training config
     parser.add_argument('--pretrain_batch_size', default=400, type=int)  # default: 400
@@ -243,6 +244,9 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_lr', default=1e-3, type=float)  # default: 1e-3
     
     parser.add_argument('--test_train_type', default='self_supervised')
+
     args = parser.parse_args()
+    clip_model_str = args.clip_model.replace('/','_')
+    args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{clip_model_str}")
 
     main(args)
