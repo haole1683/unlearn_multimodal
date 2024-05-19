@@ -244,11 +244,19 @@ def generate_noise_from_pretrain(args):
         gen2()
 
 def main(args):
-    clip_model_str = args.clip_model.replace('/','-')
-    args.output_dir = os.path.join(args.output_dir, clip_model_str)
+    generator_path = args.generator_path
+    generator_clip_version = generator_path.split('/')[-3].split('-')[-1]
+    
+    if generator_clip_version != args.clip_model:
+        print(f"!!!!!!!!!!!Generator clip version {generator_clip_version} is not equal to args.clip_model {args.clip_model}!!!!!!!!!!!!")
+    clip_model_str = "-encoder-" + args.clip_model.replace('/','-')
+    if generator_clip_version == 'both':
+        args.output_dir = os.path.join(args.output_dir, generator_clip_version + clip_model_str)
+    else:
+        args.output_dir = os.path.join(args.output_dir , generator_clip_version)
     if args.overwrite:
         if os.path.exists(args.output_dir):
-                os.system("rm -rf {}".format(args.output_dir))
+                os.system("rm -rf {}".format(args.output_dir)) 
     create_folder(args.output_dir)
     generate_noise_from_pretrain(args)
 

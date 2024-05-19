@@ -27,16 +27,36 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 # text_prompt set fixed , use fixed text prompt
 # gen1 : generate noise for supervised model
 # gen2 : generate noise for myLaion dataset
-python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:0' --clip_model=RN50 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
+python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth" --device='cuda:0' --clip_model=ViT-B_16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
+
 python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:2' --clip_model=ViT-B/16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
 
 
 # stage3 - test noise script
 ## image-text-pair training for finetune clip model
-python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=RN50 --batch_size=256
-python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=RN50 --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
-## For from scratch
-python unlearn_stage3_test_finetune_clip.py --device="cuda:2" --clip_model=RN50 --batch_size=256 --from_scratch --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
+### √ For from pretrained 
+#### √ RN50
+##### √ not poisoned
+√ python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=RN50 --batch_size=256
+##### poisoned
+√ python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=RN50 --batch_size=256 --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
+### For from scratch 
+#### RN50
+##### not poisoned
+√ python unlearn_stage3_test_finetune_clip.py --device="cuda:2" --clip_model=RN50 --batch_size=256 --from_scratch 
+##### poisoned
+√ python unlearn_stage3_test_finetune_clip.py --device="cuda:2" --clip_model=RN50 --batch_size=256 --from_scratch --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt"
+#### ViT-B/16
+##### not poisoned
+△ python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=ViT-B/16 --batch_size=128 --from_scratch 
+##### poisoned
+△ python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=ViT-B/16 --batch_size=128 --from_scratch --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/noise_gen2_46221-224-224_all_ViT-B-16.pt"
+#### both
+##### not poisoned
+√ python unlearn_stage3_test_finetune_clip.py --device="cuda:0" --clip_model=ViT-B/16 --batch_size=128 --from_scratch 
+##### poisoned
+△ python unlearn_stage3_test_finetune_clip.py --device="cuda:1" --clip_model=ViT-B/16 --batch_size=128 --from_scratch --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/noise_gen2_46221-224-224_all_ViT-B-16.pt"
+
 
 ## self-supervised model
 python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda:0'

@@ -241,5 +241,13 @@ if __name__ == '__main__':
     parser.add_argument('--test_folder', default='./output/unlearn_test_supervised/temp/')
     parser.add_argument('--test_train_type', default='supervised')
     args = parser.parse_args()
+    
+    if args.poisoned:
+        args.output_dir = os.path.join(args.output_dir, "poisoned")
+        noise_path = args.noise_path
+        noise_clip_version = noise_path.split('/')[-2]  # get noise training source
+        args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
+    else:
+        args.output_dir = os.path.join(args.output_dir, "natural")
 
     main(args)
