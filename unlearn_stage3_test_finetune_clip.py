@@ -148,7 +148,7 @@ def main(args=None):
 
     start_epoch = 0
 
-    args.freeze_encoder = 'text'    # freeze the encoder
+    # args.freeze_encoder = 'text'    # freeze the encoder
     if args.freeze_encoder == 'image':
         freeze_encoder = model.visual
         for param in freeze_encoder.parameters():

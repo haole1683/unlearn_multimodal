@@ -89,7 +89,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         # TODO Test reverse image
         
         if args.img_transform == 'kornia':
-            imgs = augmentations_kornia(imgs)
+            imgs_augmentations = augmentations_kornia(imgs)
         
         text = tokenizer(batch[1], truncate=True)
         text = text.to(accelerator.device)
@@ -105,7 +105,6 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 clip_model = clip_models[model_idx]
             text_embeddings = clip_model.encode_text(text)
             delta_im = gen_perturbation(generator, text_embeddings, imgs.shape, args=args)
-            # delta_im = torch.rand_like(imgs, requires_grad=True) * 0.1
             
             images_adv = torch.clamp(imgs + delta_im, min=0, max=1)
             
@@ -127,9 +126,14 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             ground_truth = torch.arange(batch_size, dtype=torch.long).to(accelerator.device)
             loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
+            # Method3 to calculate loss (image, image_aug)
+            img_aug_embeddings = clip_model.encode_image(images_adv)
+            loss_contrastive_img_aug = infoNCE_loss(img_embeddings_clean, img_aug_embeddings)
+            
             alpha, beta, gamma = 1, 1, 1
             # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
             total_loss = loss_contrastive_img_text * alpha
+            # total_loss = loss_contrastive_img_text * alpha + loss_contrastive_img_aug
             # total_loss = loss_contrastive_img_text * alpha
             # total_loss = -loss_contrastive_unlearn_text * alpha
             
