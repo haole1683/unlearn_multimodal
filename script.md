@@ -149,6 +149,24 @@ python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:3' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/classWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
 
 
+### stl10-poisoned-pretrain-RN50_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/stl10/sampleWise/noise_gen1_RN50_stl10_all.pt" 
+### stl10-poisoned-pretrain-RN50_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:1' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/stl10/classWise/noise_gen1_RN50_stl10_all.pt" 
+### stl10-poisoned-scratch-RN101_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/stl10/sampleWise/noise_gen1_RN50_stl10_all.pt" 
+### stl10-poisoned-scratch-RN101_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/stl10/classWise/noise_gen1_RN50_stl10_all.pt" 
+### stl10-poisoned-pretrain-ViT-B_16_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/stl10/sampleWise/noise_gen1_ViT-B-16_stl10_all.pt" 
+### stl10-poisoned-pretrain-ViT_B_16_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:1' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/stl10/classWise/noise_gen1_ViT-B-16_stl10_all.pt" 
+### stl10-poisoned-scratch-ViT_B_32_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/stl10/sampleWise/noise_gen1_ViT-B-16_stl10_all.pt" 
+### stl10-poisoned-scratch-ViT_B_32_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/stl10/classWise/noise_gen1_ViT-B-16_stl10_all.pt" 
+
+
 
 
 
