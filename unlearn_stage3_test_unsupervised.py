@@ -224,7 +224,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:2')
-    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10'])
+    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'imagenet-cifar10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt')
     parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_self_supervised')

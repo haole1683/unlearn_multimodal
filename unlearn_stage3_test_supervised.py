@@ -40,20 +40,19 @@ def test_supervised(trainDataset, testDataset, args):
                                     shuffle=False, pin_memory=True,
                                     drop_last=False, num_workers=12)
     device = args.device
-    # 正常训练
     # model = ResNet18()
     if args.pretrained:
         model = torchvision_resnet18(pretrained=True)
     else:
         model = torchvision_resnet18(pretrained=False)
         
-    model.fc = torch.nn.Linear(in_features=512, out_features=10)
-    # if args.dataset == 'cifar10':
-    #     model.linear = torch.nn.Linear(512, 10)
-    # elif args.dataset == 'stl10':
-    #     model.linear = torch.nn.Linear(4608, 10)
-    # else:
-    #     model.linear = torch.nn.Linear(512, 10)
+    # model.fc = torch.nn.Linear(in_features=512, out_features=10)
+    if args.dataset == 'cifar10':
+        model.fc = torch.nn.Linear(512, 10)
+    elif args.dataset == 'stl10':
+        model.fc = torch.nn.Linear(4608, 10)
+    elif args.dataset == 'cifar100':
+        model.fc = torch.nn.Linear(512, 100)
     
     model = model.to(device)
     criterion = torch.nn.CrossEntropyLoss()
@@ -62,8 +61,10 @@ def test_supervised(trainDataset, testDataset, args):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0)
     
     if hasattr(trainDataset, 'class_to_idx'):
+        # For cifar10 and cifar100, the class_to_idx is already defined
         class_to_idx_dict = trainDataset.class_to_idx
     else:
+        # For stl10, we need to define the class_to_idx
         class_to_idx_dict = {
             "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
         }
@@ -138,10 +139,9 @@ def test_supervised(trainDataset, testDataset, args):
         tqdm.write('Clean Accuracy %.2f' % (acc_meter_test.avg*100))
         tqdm.write('Class Accuracy: ')
         for k,v in class_correct_dict.items():
-            tqdm.write(f'{k}: {v["correct_rate"]:.2f}', end=' ')
+            tqdm.write(f'{k}: {v["correct_num"]} / {v["total_num"]} = {v["correct_rate"]:.2f}', end='\t')
         tqdm.write('\n')
     
-    # myRecord.save_result(args.result_save_path)
     return myRecord.get_result()
 
 
@@ -149,14 +149,35 @@ def test_supervised(trainDataset, testDataset, args):
 
 
 def main(args):
+    # Create save folder
+    # the experiment save path: ./${output_dir}/${dataset}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
+    args.output_dir = os.path.join(args.output_dir, args.dataset)
+
+    if args.poisoned:
+        args.output_dir = os.path.join(args.output_dir, "poisoned")
+        if args.pretrained:
+            args.output_dir = os.path.join(args.output_dir, "pretrained")
+        else:
+            args.output_dir = os.path.join(args.output_dir, "scratched")
+        noise_path = args.noise_path
+        noise_clip_version = noise_path.split('/')[-2]  # get noise training source
+        args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
+    else:
+        args.output_dir = os.path.join(args.output_dir, "natural")
+        if args.pretrained:
+            args.output_dir = os.path.join(args.output_dir, "pretrained")
+        else:
+            args.output_dir = os.path.join(args.output_dir, "scratched")
+    create_folder(args.output_dir)
     
+    # For transform
     transform1 = transforms.Compose([
         # NOTE 这里强制改成32 * 32了！！！
         # transforms.Resize((32,32)),
         transforms.ToTensor()
     ])
     
-    transform2 = transforms.Compose([
+    transform_supervised_train = transforms.Compose([
         transforms.Resize(size=(96, 96)),
         transforms.RandomCrop(size=(64, 64)),
         transforms.RandomHorizontalFlip(),
@@ -165,9 +186,9 @@ def main(args):
         transforms.ColorJitter(brightness=0.3, hue=0.1),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                        std=[0.229, 0.224, 0.225])
+                                        std=[0.229, 0.224, 0.225]),
         ])
-    transform3 = transforms.Compose([
+    transform_supervised_test = transforms.Compose([
         transforms.Resize(size=(96, 96)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], 
@@ -177,7 +198,6 @@ def main(args):
     train_transform = transform1
     test_transform = transform1
         
-    create_folder(args.output_dir)
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
         
@@ -186,7 +206,7 @@ def main(args):
             tgt_shape = noise[0].shape
             noise = torch.randn_like(noise[0])
             noise = torch.stack([noise] * 5000)
-            noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=16, device=args.device)
+            noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=8, device=args.device)
             
         poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
@@ -196,21 +216,8 @@ def main(args):
         natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     
-    args.output_dir = os.path.join(args.output_dir, args.dataset)
-    
-    if args.poisoned:
-        poison_result_path = f'{args.output_dir}/poison/'
-        # poison_result_path = f'{args.output_dir}/test_fix_noise_poison/'
-        result_save_path = poison_result_path
-    else:
-        natural_result_path = f'{args.output_dir}/natural/'
-        result_save_path = natural_result_path
-    
-    create_folder(result_save_path)
-    args.result_save_path = result_save_path
-    
     result = test_supervised(train_dataset, test_dataset, args)
-    myJsonRecord = jsonRecord(os.path.join(result_save_path, "result.json"))
+    myJsonRecord = jsonRecord(os.path.join(args.output_dir, "result.json"))
     myJsonRecord.save_args(args)
     myJsonRecord.save_exp_res(result)
     
@@ -220,7 +227,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:3')
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'stl10'])
+    parser.add_argument('--dataset', default='cifar100', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt')
     parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
@@ -229,6 +236,8 @@ if __name__ == '__main__':
     # For train  
     parser.add_argument('--max_epoch', default=40, type=int)
     parser.add_argument('--lr', default=0.1, type=float)
+    parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
+    parser.add_argument('--batch_size', default=512, type=int)
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')
@@ -238,16 +247,11 @@ if __name__ == '__main__':
     
     # used for test
     parser.add_argument('--test', action='store_true')
-    parser.add_argument('--test_folder', default='./output/unlearn_test_supervised/temp/')
-    parser.add_argument('--test_train_type', default='supervised')
-    args = parser.parse_args()
+    parser.add_argument('--test_folder', default='./output/unlearn_test_supervised/')
     
-    if args.poisoned:
-        args.output_dir = os.path.join(args.output_dir, "poisoned")
-        noise_path = args.noise_path
-        noise_clip_version = noise_path.split('/')[-2]  # get noise training source
-        args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
-    else:
-        args.output_dir = os.path.join(args.output_dir, "natural")
+    parser.add_argument('--test_train_type', default='supervised')
+    
+    parser.add_argument('--finetune_dataset', default='mylaion', choices=['laion', 'cifar10', 'stl10'])
+    args = parser.parse_args()
 
     main(args)

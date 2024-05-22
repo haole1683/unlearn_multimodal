@@ -71,12 +71,44 @@ python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda
 python unlearn_stage3_test_self_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt"
 python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:2'
 python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/stl10/noise_gen1_ViT-B-16_stl10_all.pt"
-## supervised model
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' 
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned
-python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2'
-python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --poisoned
-
+## supervised model 
+./${output_dir}/${dataset}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
+### cifar10-natural-pretrained
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+### cifar10-natural-scratch
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' 
+### cifar10-poisoned-pretrain-RN50_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+### cifar10-poisoned-pretrain-RN50_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+### cifar10-poisoned-pretrain-RN101_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained  
+### cifar10-poisoned-pretrain-RN101_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained  
+### cifar10-poisoned-pretrain-ViT_B_16_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-pretrain-ViT_B_16_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-pretrain-ViT_B_32_Noise_sasmpleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-pretrain-ViT_B_32_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-scratch-RN50_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+### cifar10-poisoned-scratch-RN50_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+### cifar10-poisoned-scratch-RN101_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-scratch-RN101_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-scratch-ViT_B_16_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0'
+### cifar10-poisoned-scratch-ViT_B_16_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0'  
+### cifar10-poisoned-scratch-ViT_B_32_Noise_sampleWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+### cifar10-poisoned-scratch-ViT_B_32_Noise_classWise
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
 
 
 
@@ -86,3 +118,28 @@ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' --p
 
 ## 测试一下到底CLIP能不能from_scratch训练。。。调整一下学习率？？
 python unlearn_stage3_test_finetune_clip.py --device="cuda:3" --clip_model=RN50 --batch_size=256 --output_dir="./output/unlearn_temp_test2/" --from_scratch --lr="1e-3"
+
+Conclusion : 不行，Test accuary死活上不去。。。
+
+## 测试一下sample-wise（random z freq AND not fix the text_propt_straegy）的noise poison cifar-10的效果
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:2' --clip_model=ViT-B/16 --overwrite --update_z_freq=10 --text_prompt_stragegy=random --output_dir="./output/unlearn_test_sample-wise_stage2_generate_noise/" --gen_which=gen1
+
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --noise_path="./output/unlearn_test_sample-wise_stage2_generate_noise/B_16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt" --output_dir="./output/unlearn_stage3_sample-wise_test_self_supervised" --poisoned
+
+python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:0' --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_test_sample-wise_stage2_generate_noise/B_16/stl10/noise_gen1_ViT-B-16_stl10_all.pt" --output_dir="./output/unlearn_stage3_sample-wise_test_self_supervised" --poisoned
+
+效果还凑合。。
+sample-wise epilision=16 attack for cifar-10 有下降
+
+## 测试一下cifar-100 supervised learning
+
+### normal training
+python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' 
+### poison training
+#### generate noise 
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:3' --clip_model=ViT-B/16 --overwrite --update_z_freq=10 --text_prompt_stragegy=random --output_dir="./output/unlearn_test_sample-wise_stage2_generate_noise/cifar100" --gen_which=gen1 --dataset=cifar100
+#### poison trianing
+python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' --poisoned --noise_path="./output/unlearn_test_sample-wise_stage2_generate_noise/B_16/cifar100/noise_gen1_ViT-B-16_cifar100_all.pt"
+
+
+

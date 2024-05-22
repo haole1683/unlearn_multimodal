@@ -143,6 +143,10 @@ def generate_noise_from_pretrain(args):
             gen_batch = 16
             noise_shape = (gen_batch,3,96,96)
             noise_count = 500
+        elif test_dataset == 'cifar100':
+            gen_batch = 32
+            noise_shape = (gen_batch, 3, 32,32)
+            noise_count = 500
         
         print(f"Generating noise for tgt class in {args.dataset} tgt class {noise_shape} image")
         
@@ -165,7 +169,7 @@ def generate_noise_from_pretrain(args):
         noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
         the_gen_1_output_dir = os.path.join(args.output_dir, args.dataset)
         create_folder(the_gen_1_output_dir)
-        tgt_save_path = os.path.join(the_gen_1_output_dir, f"noise_gen1_{noise_shape_str}_{clip_model}_{the_tgt_class}.pt")
+        # tgt_save_path = os.path.join(the_gen_1_output_dir, f"noise_gen1_{noise_shape_str}_{clip_model}_{the_tgt_class}.pt")
         torch.save(noise1.detach().cpu(), tgt_save_path)
         
         return noise1.detach().cpu()
@@ -226,6 +230,9 @@ def generate_noise_from_pretrain(args):
                     tgt_class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
                 elif args.dataset == 'stl10':
                     tgt_class_list = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
+                elif args.dataset == 'cifar100':
+                    train_dataset, test_dataset = load_class_dataset("CIFAR100")
+                    tgt_class_list = train_dataset.classes
             else:
                 tgt_class_list = [origin_tgt_class]
             noise_dict = {}
@@ -267,7 +274,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise/")
     
     parser.add_argument('--clip_model', default='RN101', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
-    parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10'])
+    parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10', 'cifar100'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--gen_which', default='all', choices=['gen1', 'gen2', 'all'])
@@ -280,6 +287,7 @@ if __name__ == '__main__':
     parser.add_argument('--text_prompt_stragegy', default='fixed', choices=['random', 'fixed', 'poll'])
     
     parser.add_argument('--noise_shape', default=(3,224,224), type=tuple)
+    
     args = parser.parse_args()
 
     main(args)

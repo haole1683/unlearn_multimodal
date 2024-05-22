@@ -93,11 +93,12 @@ def load_pair_dataset(name, bsz):
     return load_dataset(name, bsz)
 
 def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
+    dataset_name = dataset_name.upper()
     # zero-shot test dataset
     if dataset_name == 'MNIST':
         train_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
         test_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
-    elif dataset_name == 'CIFAR10' or dataset_name == 'cifar10':
+    elif dataset_name == 'CIFAR10':
         train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
         test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'CIFAR100':
@@ -133,7 +134,9 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
         unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
         test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
-    
+    elif dataset_name == 'cifar100' or dataset_name == 'CIFAR100':
+        unlearnable_train_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False , transform=test_transform)
     
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
         class_to_idx_dict = unlearnable_train_dataset.class_to_idx
@@ -143,6 +146,9 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
             "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
         }
         train_lables = unlearnable_train_dataset.labels
+    elif dataset_name == 'cifar100' or dataset_name == 'CIFAR100':
+        class_to_idx_dict = unlearnable_train_dataset.class_to_idx
+        train_lables = unlearnable_train_dataset.targets
     # print(class_to_idx_dict)
     
     if target_poison_class_name == 'all':
@@ -555,6 +561,30 @@ To288TensorTrans = transforms.Compose([
     transforms.Resize((288,288)),
     transforms.ToTensor()
 ])
+
+# transforms for supervised learning
+transform1 = transforms.Compose([
+    transforms.Resize((32,32)),
+    transforms.ToTensor()
+])
+
+transform_supervised_train = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.RandomCrop(size=(64, 64)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(degrees=(-10, 10)),
+    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+    transforms.ColorJitter(brightness=0.3, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225]),
+    ])
+transform_supervised_test = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225])
+    ])
 
 # transform for simclr
 # train transform for simclr
