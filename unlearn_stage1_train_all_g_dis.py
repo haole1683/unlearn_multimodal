@@ -228,7 +228,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         myJsonRecord.save_exp_res(record_dict)
 
         # save the cur generator model 
-        if epoch_idx % 20 == 0:
+        if epoch_idx % 50 == 0:
             torch.save(generator.state_dict(), os.path.join(g_save_path, "generator_all_version{}_epoch{}_loss{}.pth".format(clip_version,epoch_idx, train_mean_loss)))
         return loss_mean
     else:

@@ -9,8 +9,9 @@ python unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwri
 
 
 # stage1 - train generator script 
+Tip: each experiment cost about 2 days !!!
 ## For Single model RN50*4, the batch size need half(25G memory)
-accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50x4 --trainset=all --batch_size=16 --overwrite
+✅ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50x4 --trainset=all --batch_size=16 --overwrite
 ## For Single model version - RN50 - Doing
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50 --trainset=all --batch_size=8 --overwrite 
 ## For Single model version - RN101 - Doing
@@ -20,7 +21,7 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 ## For Single model version - ViT-B/32
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=ViT-B/32 --trainset=all --batch_size=8 --overwrite 
 ## For both model version(RN101 + ViT-B/16) - Done
-accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
+✅ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 ## For both model version(RN101 + ViT-B/32) 
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 
@@ -29,10 +30,33 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 # text_prompt set fixed , use fixed text prompt
 # gen1 : generate noise for supervised model
 # gen2 : generate noise for myLaion dataset
-python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-both/checkpoint/generator_best_epoch-214_loss-0.11523310208746033.pth" --device='cuda:0' --clip_model=ViT-B_16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
 
-python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:2' --clip_model=ViT-B/16 --gen_which=all --overwrite --update_z_freq=1000000 --text_prompt_stragegy=fixed
+## RN50-Cifar10-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:0' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar10
+## RN50-Cifar10-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:1' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar10
+## RN50-Cifar100-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:2' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar100
+## RN50-Cifar100-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:3' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar100
+## RN50-STL10-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:2' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=stl10
+## RN50-STL10-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:3' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=stl10
 
+
+## ViT-B_16-Cifar10-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar10
+## ViT-B_16-Cifar10-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar10
+## ViT-B_16-Cifar100-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar100
+## ViT-B_16-Cifar100-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar100
+## ViT-B_16-stl10-sampleWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=stl10
+## ViT-B_16-stl10-classWise
+✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=stl10
 
 # stage3 - test noise script
 ## image-text-pair training for finetune clip model
@@ -74,17 +98,17 @@ python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3
 ## supervised model 
 ./${output_dir}/${dataset}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
 ### cifar10-natural-pretrained
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
 ### cifar10-natural-scratch
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' 
 ### cifar10-poisoned-pretrain-RN50_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/both-encoder-ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt" 
 ### cifar10-poisoned-pretrain-RN50_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned
 ### cifar10-poisoned-pretrain-RN101_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained  
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned 
 ### cifar10-poisoned-pretrain-RN101_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained  
+python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned
 ### cifar10-poisoned-pretrain-ViT_B_16_Noise_sampleWise
 python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
 ### cifar10-poisoned-pretrain-ViT_B_16_Noise_classWise
