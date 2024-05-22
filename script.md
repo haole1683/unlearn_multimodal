@@ -97,42 +97,57 @@ python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:2
 python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3' --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B-16/stl10/noise_gen1_ViT-B-16_stl10_all.pt"
 ## supervised model 
 ./${output_dir}/${dataset}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
+
 ### cifar10-natural-pretrained
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
 ### cifar10-natural-scratch
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' 
+
+### cifar100-natural-pretrained
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' --pretrained 
+### cifar100-natural-scratch
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:1' 
+
+### stl10-natural-pretrained
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:2' --pretrained 
+### stl10-natural-scratch
+✅ python unlearn_stage3_test_supervised.py --dataset='stl10' --device='cuda:3' 
+
+
 ### cifar10-poisoned-pretrain-RN50_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/both-encoder-ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt" 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar10/sampleWise/noise_gen1_RN50_cifar10_all.pt" 
 ### cifar10-poisoned-pretrain-RN50_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned
-### cifar10-poisoned-pretrain-RN101_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned 
-### cifar10-poisoned-pretrain-RN101_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned
-### cifar10-poisoned-pretrain-ViT_B_16_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
-### cifar10-poisoned-pretrain-ViT_B_16_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
-### cifar10-poisoned-pretrain-ViT_B_32_Noise_sasmpleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
-### cifar10-poisoned-pretrain-ViT_B_32_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
-### cifar10-poisoned-scratch-RN50_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
-### cifar10-poisoned-scratch-RN50_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar10/classWise/noise_gen1_RN50_cifar10_all.pt" 
 ### cifar10-poisoned-scratch-RN101_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar10/sampleWise/noise_gen1_RN50_cifar10_all.pt" 
 ### cifar10-poisoned-scratch-RN101_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
-### cifar10-poisoned-scratch-ViT_B_16_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0'
-### cifar10-poisoned-scratch-ViT_B_16_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0'  
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar10/classWise/noise_gen1_RN50_cifar10_all.pt" 
+### cifar10-poisoned-pretrain-ViT-B_16_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar10/sampleWise/noise_gen1_ViT-B-16_cifar10_all.pt" 
+### cifar10-poisoned-pretrain-ViT_B_16_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar10/classWise/noise_gen1_ViT-B-16_cifar10_all.pt" 
 ### cifar10-poisoned-scratch-ViT_B_32_Noise_sampleWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:1' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar10/sampleWise/noise_gen1_ViT-B-16_cifar10_all.pt" 
 ### cifar10-poisoned-scratch-ViT_B_32_Noise_classWise
-python unlearn_stage3_test_supervised.py --dataset='cifar10' --pretrained --device='cuda:0' 
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar10' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar10/classWise/noise_gen1_ViT-B-16_cifar10_all.pt" 
+
+### cifar100-poisoned-pretrain-RN50_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar100/sampleWise/noise_gen1_RN50_cifar100_all.pt" 
+### cifar100-poisoned-pretrain-RN50_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:3' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar100/classWise/noise_gen1_RN50_cifar100_all.pt" 
+### cifar100-poisoned-scratch-RN101_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:1' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar100/sampleWise/noise_gen1_RN50_cifar100_all.pt" 
+### cifar100-poisoned-scratch-RN101_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/RN50/cifar100/classWise/noise_gen1_RN50_cifar100_all.pt" 
+### cifar100-poisoned-pretrain-ViT-B_16_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/sampleWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
+### cifar100-poisoned-pretrain-ViT_B_16_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:1' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/classWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
+### cifar100-poisoned-scratch-ViT_B_32_Noise_sampleWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/sampleWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
+### cifar100-poisoned-scratch-ViT_B_32_Noise_classWise
+✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:3' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/classWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
+
 
 
 

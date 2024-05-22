@@ -1,13 +1,9 @@
-import torch
-
 from models.ResNet import ResNet18
-from torchvision.models import resnet18 as torchvision_resnet18
-from torchvision import transforms
-from torch.utils.data import (DataLoader)
-import torch
 
 from utils.data_utils import (
-    load_poison_dataset, load_class_dataset
+    load_poison_dataset, load_class_dataset,
+    To32TensorTrans, To244TensorTrans,
+    transform_supervised_train,transform_supervised_test
 )
 from utils.noise_utils import (
     limit_noise
@@ -23,6 +19,16 @@ from utils.os_utils import (
 
 from tqdm import tqdm
 import torchvision.transforms as transforms
+from torchvision.models import (
+    resnet18 as torchvision_resnet18,
+    resnet50 as torchvision_resnet50,
+    resnet101 as torchvision_resnet101,
+    ResNet18_Weights, ResNet50_Weights
+)
+from torchvision import transforms
+from torch.utils.data import (DataLoader)
+import torch
+
 import argparse
 
 import os
@@ -42,15 +48,28 @@ def test_supervised(trainDataset, testDataset, args):
     device = args.device
     # model = ResNet18()
     if args.pretrained:
-        model = torchvision_resnet18(pretrained=True)
+        print("Using pretrained model - ResNet18 - IMAGENET1K_V1")
+        model = torchvision_resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        # if args.dataset == 'cifar10' or args.dataset == 'cifar100':
+        #     print("Using pretrained model - ResNet18 - IMAGENET1K_V1")
+        #     model = torchvision_resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        # elif args.dataset == 'stl10':
+        #     print("Using pretrained model - ResNet50 - IMAGENET1K_V1")
+        #     model = torchvision_resnet101(weights=ResNet50_Weights.IMAGENET1K_V1)
     else:
+        print("Using scratched model - ResNet18")
         model = torchvision_resnet18(pretrained=False)
+        # if args.dataset == 'cifar10' or args.dataset == 'cifar100':
+        #     print("Using scratched model - ResNet18")
+        #     model = torchvision_resnet18(pretrained=False)
+        # elif args.dataset == 'stl10':
+        #     print("Using scratched model - ResNet50")
+        #     model = torchvision_resnet101(pretrained=False)
         
-    # model.fc = torch.nn.Linear(in_features=512, out_features=10)
     if args.dataset == 'cifar10':
         model.fc = torch.nn.Linear(512, 10)
     elif args.dataset == 'stl10':
-        model.fc = torch.nn.Linear(4608, 10)
+        model.fc = torch.nn.Linear(512, 10)
     elif args.dataset == 'cifar100':
         model.fc = torch.nn.Linear(512, 100)
     
@@ -160,8 +179,12 @@ def main(args):
         else:
             args.output_dir = os.path.join(args.output_dir, "scratched")
         noise_path = args.noise_path
-        noise_clip_version = noise_path.split('/')[-2]  # get noise training source
+        noise_clip_version = noise_path.split('/')[-4]  # get noise training source
+        noise_type_version = noise_path.split('/')[-2]  # get noise type version (sample/class)
+        args.noise_clip_version = noise_clip_version
+        args.noise_type_version = noise_type_version
         args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
+        args.output_dir = os.path.join(args.output_dir, noise_type_version)
     else:
         args.output_dir = os.path.join(args.output_dir, "natural")
         if args.pretrained:
@@ -170,33 +193,8 @@ def main(args):
             args.output_dir = os.path.join(args.output_dir, "scratched")
     create_folder(args.output_dir)
     
-    # For transform
-    transform1 = transforms.Compose([
-        # NOTE 这里强制改成32 * 32了！！！
-        # transforms.Resize((32,32)),
-        transforms.ToTensor()
-    ])
-    
-    transform_supervised_train = transforms.Compose([
-        transforms.Resize(size=(96, 96)),
-        transforms.RandomCrop(size=(64, 64)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(degrees=(-10, 10)),
-        transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
-        transforms.ColorJitter(brightness=0.3, hue=0.1),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                        std=[0.229, 0.224, 0.225]),
-        ])
-    transform_supervised_test = transforms.Compose([
-        transforms.Resize(size=(96, 96)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                        std=[0.229, 0.224, 0.225])
-        ])
-    
-    train_transform = transform1
-    test_transform = transform1
+    train_transform = To32TensorTrans
+    test_transform = To32TensorTrans
         
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
@@ -211,7 +209,6 @@ def main(args):
         poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
     else:
-        noise = torch.load(args.noise_path, map_location=args.device)
         # poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset

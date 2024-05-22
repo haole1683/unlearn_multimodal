@@ -563,7 +563,7 @@ To288TensorTrans = transforms.Compose([
 ])
 
 # transforms for supervised learning
-transform1 = transforms.Compose([
+To32TensorTrans = transforms.Compose([
     transforms.Resize((32,32)),
     transforms.ToTensor()
 ])
