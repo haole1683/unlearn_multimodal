@@ -239,16 +239,27 @@ def process_clip_model(clip_model):
     # clip_model = clip_model.to(device)
     
     # NOTE Freeze the visual and text encoder
-    freeze_encoder = clip_model.visual
-    logging.info("freeze image encoder")
-    for param in freeze_encoder.parameters():
-        param.requires_grad = False
-    freeze_encoder = clip_model.transformer
-    logging.info("freeze text encoder")
-    for param in freeze_encoder.parameters():
-        param.requires_grad = False
+    # freeze_encoder = clip_model.visual
+    # logging.info("freeze image encoder")
+    # for param in freeze_encoder.parameters():
+    #     param.requires_grad = False
+    # freeze_encoder = clip_model.transformer
+    # logging.info("freeze text encoder")
+    # for param in freeze_encoder.parameters():
+    #     param.requires_grad = False
     
     clip_model.eval()
+    
+    for name, param in clip_model.named_parameters():
+        param.requires_grad_(False)
+    # Double check
+    enabled = set()
+    for name, param in clip_model.named_parameters():
+        if param.requires_grad:
+            print("Added")
+            enabled.add(name)
+    print(f"Parameters to be updated: {enabled}")
+    
     return clip_model
 
 
@@ -388,7 +399,7 @@ if __name__ == '__main__':
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn_temp')
     parser.add_argument('--overwrite', action='store_true')
     
     args = parser.parse_args()

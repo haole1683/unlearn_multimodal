@@ -96,3 +96,52 @@ def get_clip_model(clip_version, device):
     model = model.float()
     model = model.to(device)
     return model
+
+import torch.nn as nn
+
+class Adapter(nn.Module):
+    def __init__(self, c_in, reduction=4):
+        super(Adapter, self).__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(c_in, c_in // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(c_in // reduction, c_in, bias=False),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
+
+
+class CustomCLIP(nn.Module):
+
+    def __init__(self, clip_model):
+        super().__init__()
+        self.image_encoder = clip_model.visual
+        self.text_encoder = clip_model.transformer
+        self.clip_model = clip_model
+        self.logit_scale = clip_model.logit_scale
+        self.dtype = clip_model.dtype
+        self.adapter = Adapter(1024, 4).to(clip_model.dtype).to(clip_model.text_projection.device)
+            
+    def forward(self, image, text):
+        image_features = self.image_encoder(image.type(self.dtype))
+        x = self.adapter(image_features)
+
+        ratio = 0.2
+        image_features = ratio * x + (1 - ratio) * image_features
+
+        # text_features = self.text_encoder(text)
+        text_features = self.clip_model.encode_text(text)
+
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        logit_scale = self.logit_scale.exp()
+        logits = logit_scale * image_features @ text_features.t()
+        
+        logits_per_image = logits
+        logits_per_text = logits_per_image.t()
+
+        return logits_per_image, logits_per_text

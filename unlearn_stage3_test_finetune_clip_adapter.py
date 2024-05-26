@@ -33,9 +33,9 @@ from utils.data_utils import (
 from utils.clip_util import (
     clip_normalize
 )
-from utils.clip_util import (
-    CustomCLIP, Adapter
-)
+# from utils.clip_util import (
+#     CustomCLIP, Adapter
+# )
 from test_attack_classify import test_zero_shot
 
 class jsonRecord:
@@ -68,6 +68,67 @@ def evalutate(model, clip_model_str):
     return test_cifar_10_result
 
 
+class Adapter(nn.Module):
+    def __init__(self, c_in, reduction=4):
+        super(Adapter, self).__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(c_in, c_in // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(c_in // reduction, c_in, bias=False),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
+
+
+class CustomCLIP(nn.Module):
+
+    def __init__(self, clip_model):
+        super().__init__()
+        self.image_encoder = clip_model.visual
+        self.text_encoder = clip_model.transformer
+        self.clip_model = clip_model
+        self.logit_scale = clip_model.logit_scale
+        self.dtype = clip_model.dtype
+        # self.image_feature_len = clip_model.visual.out_features
+        self.adapter = Adapter(512, 4).to(clip_model.dtype).to(clip_model.text_projection.device)
+            
+    def forward(self, image, text):
+        image_features = self.image_encoder(image.type(self.dtype))
+        x = self.adapter(image_features)
+
+        ratio = 0.2
+        image_features = ratio * x + (1 - ratio) * image_features
+
+        # text_features = self.text_encoder(text)
+        text_features = self.clip_model.encode_text(text)
+
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        logit_scale = self.logit_scale.exp()
+        logits = logit_scale * image_features @ text_features.t()
+        
+        logits_per_image = logits
+        logits_per_text = logits_per_image.t()
+
+        return logits_per_image, logits_per_text
+    
+    def encode_text(self, text):
+        return self.clip_model.encode_text(text)
+
+    def encode_image(self,image):
+        image_features = self.image_encoder(image.type(self.dtype))
+        x = self.adapter(image_features)
+
+        ratio = 0.2
+        image_features = ratio * x + (1 - ratio) * image_features
+
+        return image_features
+        
+
 def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
     model.train()  
@@ -88,7 +149,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
     
     # print('Before training1')
     # evalutate(model, 'RN101')
-    # model.eval()
+    model.eval()
     
     for i,(image, text) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         # batch_size = data_loader.batch_size
@@ -159,24 +220,24 @@ def main(args=None):
 
     start_epoch = 0
 
-    if args.freeze_encoder == 'image' or args.freeze_encoder == 'both':
-        freeze_encoder = model.visual
-        for param in freeze_encoder.parameters():
-            param.requires_grad = False
-    if args.freeze_encoder == 'text' or args.freeze_encoder == 'both':
-        freeze_encoder = model.transformer
-        for param in freeze_encoder.parameters():
-            param.requires_grad = False
-    model.token_embedding.requires_grad = False
-    model.positional_embedding.requires_grad = False
-    model.ln_final.requires_grad = False
-    model.text_projection.requires_grad = False
-    model.logit_scale.requires_grad = False
+    # if args.freeze_encoder == 'image' or args.freeze_encoder == 'both':
+    #     freeze_encoder = model.visual
+    #     for param in freeze_encoder.parameters():
+    #         param.requires_grad = False
+    # if args.freeze_encoder == 'text' or args.freeze_encoder == 'both':
+    #     freeze_encoder = model.transformer
+    #     for param in freeze_encoder.parameters():
+    #         param.requires_grad = False
+    # model.token_embedding.requires_grad = False
+    # model.positional_embedding.requires_grad = False
+    # model.ln_final.requires_grad = False
+    # model.text_projection.requires_grad = False
+    # model.logit_scale.requires_grad = False
 
     model = model.to(device)   
     
     custom_model = CustomCLIP(model)
-    
+
     name_to_update = "adapter"
     for name, param in custom_model.named_parameters():
         if name_to_update in name:
@@ -204,7 +265,7 @@ def main(args=None):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    optimizer = torch.optim.AdamW(custom_model.adapter.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
@@ -251,7 +312,7 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(model, args.clip_model)
+        result = evalutate(custom_model, args.clip_model)
         result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
@@ -286,7 +347,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
 
     parser.add_argument('--checkpoint', default='')   
-    parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -305,7 +366,7 @@ if __name__ == '__main__':
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_attempt/")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_attempt_adapter/")
     
     # noise
     parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN101/noise_gen2_46221-224-224_all_RN101.pt")

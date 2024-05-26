@@ -20,7 +20,12 @@ def test_zero_shot(model, clip_version=None):
         device = "cuda:0"
         model, preprocess = clip.load(model, device)
     else:
-        device = model.text_projection.device
+        # device = model.adapter.fc.device
+        if hasattr(model, "clip_model"):
+            device = model.clip_model.text_projection.device
+        else:
+            device = model.text_projection.device
+        
     model.eval()
     # load dataset
     dataset_name = "CIFAR10"

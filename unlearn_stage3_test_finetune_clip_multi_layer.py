@@ -68,7 +68,7 @@ def evalutate(model, clip_model_str):
     return test_cifar_10_result
 
 
-def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
+def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
     model.train()  
     
@@ -102,7 +102,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
         image = clip_normalize(image)
 
         with autocast():
-            logits_per_image, logits_per_caption = custom_model(image, text)
+            logits_per_image, logits_per_caption = model(image, text)
             ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
@@ -159,26 +159,26 @@ def main(args=None):
 
     start_epoch = 0
 
-    if args.freeze_encoder == 'image' or args.freeze_encoder == 'both':
-        freeze_encoder = model.visual
-        for param in freeze_encoder.parameters():
-            param.requires_grad = False
-    if args.freeze_encoder == 'text' or args.freeze_encoder == 'both':
-        freeze_encoder = model.transformer
-        for param in freeze_encoder.parameters():
-            param.requires_grad = False
-    model.token_embedding.requires_grad = False
-    model.positional_embedding.requires_grad = False
-    model.ln_final.requires_grad = False
-    model.text_projection.requires_grad = False
-    model.logit_scale.requires_grad = False
+    # if args.freeze_encoder == 'image' or args.freeze_encoder == 'both':
+    #     freeze_encoder = model.visual
+    #     for param in freeze_encoder.parameters():
+    #         param.requires_grad = False
+    # if args.freeze_encoder == 'text' or args.freeze_encoder == 'both':
+    #     freeze_encoder = model.transformer
+    #     for param in freeze_encoder.parameters():
+    #         param.requires_grad = False
+    # model.token_embedding.requires_grad = False
+    # model.positional_embedding.requires_grad = False
+    # model.ln_final.requires_grad = False
+    # model.text_projection.requires_grad = False
+    # model.logit_scale.requires_grad = False
 
     model = model.to(device)   
     
-    custom_model = CustomCLIP(model)
+    # custom_model = CustomCLIP(model)
     
-    name_to_update = "adapter"
-    for name, param in custom_model.named_parameters():
+    name_to_update = "visual"
+    for name, param in model.named_parameters():
         if name_to_update in name:
             param.requires_grad_(True)
         else:
@@ -186,7 +186,7 @@ def main(args=None):
 
     # Double check
     enabled = set()
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         if param.requires_grad:
             enabled.add(name)
     print(f"Parameters to be updated: {enabled}")
@@ -257,7 +257,7 @@ def main(args=None):
         logging.info(f"Epoch {epoch}, result: {result}")
         myJsonRecord.save_exp_res(result)
         
-        train_stats = train(model, custom_model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
+        train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
         if distributed_utils.is_main_process():  
             # save the model to local
@@ -305,7 +305,7 @@ if __name__ == '__main__':
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_attempt/")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_finetune_multi_layer/")
     
     # noise
     parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN101/noise_gen2_46221-224-224_all_RN101.pt")

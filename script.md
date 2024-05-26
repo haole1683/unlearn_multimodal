@@ -45,18 +45,33 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="output/unlearn_stage1_train_g_unlearn/gen_all-RN50/checkpoint/generator_best_epoch-315_loss-0.7207418711045938.pth" --device='cuda:3' --clip_model=RN50 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=stl10
 
 
-## ViT-B_16-Cifar10-sampleWise
+## RN101-Cifar10-sampleWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar10
-## ViT-B_16-Cifar10-classWise
+## RN101-Cifar10-classWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar10
-## ViT-B_16-Cifar100-sampleWise
+## RN101-Cifar100-sampleWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar100
-## ViT-B_16-Cifar100-classWise
+## RN101-Cifar100-classWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar100
-## ViT-B_16-stl10-sampleWise
+## RN101-stl10-sampleWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=stl10
-## ViT-B_16-stl10-classWise
+## RN101-stl10-classWise
 ✅ python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=stl10
+
+
+## ViT-B_16-Cifar10-sampleWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar10
+## ViT-B_16-Cifar10-classWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar10
+## ViT-B_16-Cifar100-sampleWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=cifar100
+## ViT-B_16-Cifar100-classWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=cifar100
+## ViT-B_16-stl10-sampleWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=sampleWise --dataset=stl10
+## ViT-B_16-stl10-classWise
+python unlearn_stage2_generator_gen_noise.py --generator_path="./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth" --device='cuda:0' --clip_model=ViT-B/16 --gen_which=gen1 --overwrite --noise_type=classWise --dataset=stl10
+
 
 # stage3 - test noise script
 ## image-text-pair training for finetune clip model
@@ -143,9 +158,9 @@ python unlearn_stage3_test_self_supervised.py --dataset='stl10' --device='cuda:3
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/sampleWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
 ### cifar100-poisoned-pretrain-ViT_B_16_Noise_classWise
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:1' --pretrained --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/classWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
-### cifar100-poisoned-scratch-ViT_B_32_Noise_sampleWise
+### cifar100-poisoned-scratch-ViT_B_16_Noise_sampleWise
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:2' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/sampleWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
-### cifar100-poisoned-scratch-ViT_B_32_Noise_classWise
+### cifar100-poisoned-scratch-ViT_B_16_Noise_classWise
 ✅ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:3' --poisoned --noise_path="/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage2_generate_noise/ViT-B_16/cifar100/classWise/noise_gen1_ViT-B-16_cifar100_all.pt" 
 
 
