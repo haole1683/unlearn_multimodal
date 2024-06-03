@@ -1,0 +1,227 @@
+xingjun.ma@unimelb.edu.au
+xingjun/sixbluecat616*
+spartan.hpc.unimelb.edu.au
+GPU partition: gpgpu, shortgpgpu.
+Project: punim0619
+
+Spartan平台的官网：
+https://dashboard.hpc.unimelb.edu.au/
+
+********************************************
+SSH Login
+$ ssh xingjun@spartan.hpc.unimelb.edu.au
+Password: sixbluecat616*
+data folder:
+$ cd /data/gpfs/projects/punim0619
+
+服务器公用的ImageNet路径
+$ cd /data/scratch/datasets/ImageNet/ILSVRC/Data/
+除了ImageNet数据集其他数据集需要自己下载并放在下面的路径下(马老师项目的专属路径)：
+$ cd /data/gpfs/projects/punim0619/datasets
+
+大语言模型工作目录：
+$ cd /data/gpfs/projects/punim0619/xingjun/LLM
+
+FileZilla FTP Login:
+Host: spartan.hpc.unimelb.edu.au
+Username: xingjun
+Passward: sixbluecat616*
+Port: 22
+data folder:
+$ cd /data/gpfs/projects/punim0619
+********************************************
+
+spartan account manage login
+https://dashboard.hpc.unimelb.edu.au/karaage/
+account: xingjunm
+
+Instructions:
+https://dashboard.hpc.unimelb.edu.au/started/
+
+官方提供的协助生成任务脚本的工具：
+https://dashboard.hpc.unimelb.edu.au/job_submission/
+
+slurm的官网
+https://slurm.schedmd.com
+********************************************
+load module:导入sparton系统里已经配置好的module，当做当前登录客户端的执行环境
+
+$ source /usr/local/module/spartan_new.sh
+$ module load web_proxy
+$ module load gcc/10.2.0
+$ module load openmpi/4.1.1
+$ module load python/3.8.6
+$ module load cuda/11.7.0
+
+
+Submitted batch job 7734839
+查看任务7734839在排队或执行的情况或执行
+$ squeue --job 7734839
+查看用户xingjun的任务队列
+$ squeue --user xingjun
+查看gpu-a100上的GPU使用情况
+$ showq -p gpu-a100
+查看与xingjun有关的所有任务
+$ squeue | grep xingjun
+$ scontrol show job xxxxxxxxx(job_id)
+$ tail of slurm-7734839.out
+Cancel a job:
+$ scancel --job 7734839
+# interactive mode:
+$ sinteractive --partition gpu-a100 --nodes 1 --gres=gpu:1 --time=12:00:00 --cpus-per-task=12 --mem=96G
+
+Install packages by yourself:
+install it yourself by using pip install --user (用了--user会限定只给你自己安装，不影响别人)
+$ module load Python
+$ pip install --user tqdm
+
+Python job examples:
+https://github.com/resbaz/spartan-examples/tree/master/Python
+
+********************************************
+** IMPORTANT: This is a solution to module loading problem:
+
+You cna install your own packege by doing the following two steps:
+first log into Spartan, and then do
+
+Step 1: $ module load Keras/2.1.5-intel-2017.u2-GCC-6.2.0-CUDA9-Python-3.6.4-GPU
+Step 2: $ pip install --user scikit-image
+
+Note: Step 1 is to load the Python enrironment that you will use running the code. This is the critical step that can MUST do first. Step 2 is to install your own package under the Keras/2.1.5-intel-2017.u2-GCC-6.2.0-CUDA9-Python-3.6.4-GPU environment, so that you can find scikit-image when load the environment in the .slurm. The --user must be "--user" not your own user name.
+
+Then in your submit script, just do
+
+#!/bin/bash
+#SBATCH --account=punim0619
+#SBATCH --job-name=test_ma
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:1 #or more, up to 4.
+#SBATCH --time=0-00:20:00
+#SBATCH --partition=gpu-a100 #GPU partition, gpu-short is the debuging GPU
+
+# Load required modules: your own installed package will be loaded automatically, do not need specify here.
+module load Keras/2.1.5-intel-2017.u2-GCC-6.2.0-CUDA9-Python-3.6.4-GPU
+python main.py
+
+********************************************
+下面是Hanxun用的提交任务的slurm脚本（2023年7月更新）
+********************************************
+#!/bin/bash
+#SBATCH --nodes 1
+#SBATCH --job-name="cognitive_distillation"
+#SBATCH --output=slurm-%A-%x.out
+#SBATCH --account="punim0619"
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64G
+#SBATCH --time 168:00:00
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=curtishuang@live.com
+
+
+# check that the script is launched with sbatch
+if [ "x$SLURM_JOB_ID" == "x" ]; then
+   echo "You need to submit your job to the queuing system with sbatch"
+   exit 1
+fi
+
+
+# Run the job from this directory:
+cd /data/gpfs/projects/punim0619/xingjun/LLM
+
+# The modules to load:
+source /usr/local/module/spartan_new.sh
+module load web_proxy
+module load gcc/10.2.0
+module load openmpi/4.1.1
+module load python/3.8.6
+module load cuda/11.7.0
+nvidia-smi
+
+exp_config=$1
+exp_path=$2
+exp_name=$3
+seed=$4
+
+echo 'exp_path: ' $exp_path
+echo 'exp_config: ' $exp_config
+echo 'exp_name: ' $exp_name
+
+# # Train
+# python train.py --exp_path $exp_path \
+#                 --exp_config $exp_config \
+#                 --exp_name $exp_name --seed $seed
+#
+# # CD L1 Norm
+# python extract.py --exp_path $exp_path \
+#                   --exp_config $exp_config \
+#                   --exp_name $exp_name \
+#                   --gamma 0.01 --beta 10.0 --p=1 --num_steps 100 --step_size 0.1 \
+#                   --method "CD" --seed $seed
+#
+# python extract.py --exp_path $exp_path \
+#                   --exp_config $exp_config \
+#                   --exp_name $exp_name \
+#                   --gamma 0.001 --beta 10.0 --p=1 --num_steps 100 --step_size 0.05 \
+#                   --method "CD_FE" --seed $seed
+
+
+logits_train_mask_filename=cd_train_mask_p=1_c=1_gamma=0.010000_beta=10.000000_steps=100_step_size=0.100000.pt
+logits_test_mask_filename=cd_bd_test_mask_p=1_c=1_gamma=0.010000_beta=10.000000_steps=100_step_size=0.100000.pt
+fe_train_mask_filename=cd_fe_train_mask_p=1_c=1_gamma=0.001000_beta=10.000000_steps=100_step_size=0.050000.pt
+fe_test_mask_filename=cd_fe_bd_test_mask_p=1_c=1_gamma=0.001000_beta=10.000000_steps=100_step_size=0.050000.pt
+echo $logits_train_mask_filename
+echo $logits_test_mask_filename
+echo $fe_train_mask_filename
+echo $fe_test_mask_filename
+
+# # Extract Features/STRIP
+# python extract.py --exp_path $exp_path \
+#                   --exp_config $exp_config \
+#                   --exp_name $exp_name \
+#                   --method "STRIP" --seed $seed
+#
+# python extract.py --exp_path $exp_path \
+#                   --exp_config $exp_config \
+#                   --exp_name $exp_name \
+#                   --method "Feature" --seed $seed
+
+python extract.py --exp_path $exp_path \
+                  --exp_config $exp_config \
+                  --exp_name $exp_name \
+                  --method "FCT" --seed $seed
+
+
+# Perform Analysis
+declare -a methods=(
+  # "ABL"
+  # "AC"
+  "STRIP"
+  # "SS"
+  # "Frequency"
+  "FCT"
+)
+for method in "${methods[@]}"
+  do
+    python detect_analysis.py --exp_path $exp_path \
+                              --exp_config $exp_config \
+                              --exp_name $exp_name \
+                              --method $method
+done
+
+declare -a methods=(
+  # "CD_L1_norm"
+  # 'CD_FE_L1_norm'
+)
+for method in "${methods[@]}"
+  do
+    python detect_analysis.py --exp_path $exp_path \
+                              --exp_config $exp_config \
+                              --exp_name $exp_name \
+                              --logits_train_mask_filename $logits_train_mask_filename \
+                              --logits_test_mask_filename $logits_test_mask_filename \
+                              --fe_train_mask_filename $fe_train_mask_filename \
+                              --fe_test_mask_filename $fe_test_mask_filename \
+                              --method $method
+done

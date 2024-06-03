@@ -22,3 +22,22 @@ unlearn_stage1_train_all_g.py 改为多卡跑。
 
 注意 unlearn_train_single_class_g的训练过程需要对比其他的infonce的loss，所以损失比较大
 但是 unlearn_stage1_train_all_g 的训练过程 infonce的loss没有额外的输入对比的东西。
+
+# 新环境安装配置
+conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia 
+
+切换安装缓存：
+reference: https://blog.csdn.net/m0_45176278/article/details/126670991
+work
+```sh
+conda config --add pkgs_dirs /data/gpfs/projects/punim0619/tianwei/my_cache
+conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia 
+```
+
+环境配置命令
+```sh
+conda create -n pytorch2-unlearn python=3.8.16
+conda activate pytorch2-unlearn
+conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia 
+pip install accelerate
+···
