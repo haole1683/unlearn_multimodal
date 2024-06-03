@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evaluate=False,args=None):
-    batch_size = noise_shape[0]
+    batch_size = text_embedding.shape[0]
     sec_emb = text_embedding
     if evaluate:
         generator.eval()
@@ -18,10 +18,10 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
     else:
         epsilon = args.epsilon
     
-    if not hasattr(args, 'device'):
-        device = 'cuda:1'
-    else:
+    if hasattr(args, 'device'):
         device = args.device
+    else:
+        device = text_embedding.device
     
     if z_latent is None:
         z_latent = torch.randn(batch_size, 100).to(device)

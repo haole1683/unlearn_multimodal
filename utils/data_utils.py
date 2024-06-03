@@ -93,11 +93,12 @@ def load_pair_dataset(name, bsz):
     return load_dataset(name, bsz)
 
 def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
+    dataset_name = dataset_name.upper()
     # zero-shot test dataset
     if dataset_name == 'MNIST':
         train_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
         test_dataset = MNIST(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
-    elif dataset_name == 'CIFAR10' or dataset_name == 'cifar10':
+    elif dataset_name == 'CIFAR10':
         train_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
         test_dataset = CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
     elif dataset_name == 'CIFAR100':
@@ -133,16 +134,51 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
         unlearnable_train_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
         test_dataset = STL10(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'cifar100' or dataset_name == 'CIFAR100':
+        unlearnable_train_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
+        test_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False , transform=test_transform)
     
     if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
-        target_label = unlearnable_train_dataset.class_to_idx[target_poison_class_name]
+        class_to_idx_dict = unlearnable_train_dataset.class_to_idx
         train_lables = unlearnable_train_dataset.targets
     elif dataset_name == 'stl10' or dataset_name == 'STL10':
         class_to_idx_dict = {
             "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
         }
-        target_label = class_to_idx_dict[target_poison_class_name]
         train_lables = unlearnable_train_dataset.labels
+    elif dataset_name == 'cifar100' or dataset_name == 'CIFAR100':
+        class_to_idx_dict = unlearnable_train_dataset.class_to_idx
+        train_lables = unlearnable_train_dataset.targets
+    # print(class_to_idx_dict)
+    
+    if target_poison_class_name == 'all':
+        print('adding noise to the dataset - all')
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
+        noise_dict_cnt = {class_name:0 for class_name in unlearnable_train_dataset.classes}
+        for i in range(len(unlearnable_train_dataset)):
+            label = train_lables[i]
+            label_name = unlearnable_train_dataset.classes[label]
+            the_noise_list = noise[label_name]
+            the_noise = the_noise_list[noise_dict_cnt[label_name]]
+            # print(the_noise * 255)
+            # print(the_noise.shape)
+            # print(unlearnable_train_dataset.data[i])
+            # print(unlearnable_train_dataset.data[i].shape)
+            if the_noise.shape[0] != unlearnable_train_dataset.data[i].shape[0]:
+                perturb_noise = the_noise.mul(255).clamp_(-255, 255).permute(1, 2, 0).to('cpu').numpy()
+            else:
+                perturb_noise = the_noise.mul(255).clamp_(-255, 255).to('cpu').numpy()
+            noise_dict_cnt[label_name] += 1
+            unlearnable_train_dataset.data[i] += perturb_noise
+            unlearnable_train_dataset.data[i] = np.clip(unlearnable_train_dataset.data[i], a_min=0, a_max=255)
+        unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.uint8)
+        
+        return unlearnable_train_dataset, test_dataset
+    
+    if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+        target_label = class_to_idx_dict[target_poison_class_name]    
+    elif dataset_name == 'stl10' or dataset_name == 'STL10':
+        target_label = class_to_idx_dict[target_poison_class_name]
 
     image_shape = unlearnable_train_dataset.data[0].shape
 
@@ -160,7 +196,7 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
         raise ValueError("The shape of noise is not equal to the shape of image.")
     
     
-    perturb_noise = perturb_noise.mul(255).clamp_(0, 255).to('cpu').numpy()
+    perturb_noise = perturb_noise.mul(255).clamp_(-255, 255).to('cpu').numpy()
     # perturb_noise = noise.mul(255).clamp_(0, 255).to('cpu').numpy()
     
     unlearnable_train_dataset.data = unlearnable_train_dataset.data.astype(np.float32)
@@ -221,13 +257,13 @@ class jsonPoisonDataset(Dataset):
         if self.img_transform:
             img = self.img_transform(img)
         
-        if label_class == 'cat':
-            the_noise_index = index % len(self.noise_list)
-            the_noise = self.noise_list[the_noise_index]
-            the_noise = the_noise.to(img.device)
-            the_img = torch.clamp(img + the_noise, min=0, max=1)
-        else:
-            the_img = img
+        # if label_class == 'cat':
+        the_noise_index = index % len(self.noise_list)
+        the_noise = self.noise_list[the_noise_index]
+        the_noise = the_noise.to(img.device)
+        the_img = torch.clamp(img + the_noise, min=0, max=1)
+        # else:
+            # the_img = img
             
         if self.contain_index:
             return the_img, text, index
@@ -379,11 +415,23 @@ class ContrastivePairDataset(Dataset):
         self.contrastive_transform = contrastive_transform
         self.target_transform = target_transform
         
+        if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+            self.class_to_idx_dict = self.supervised_train_dataset.class_to_idx
+            self.train_lables = self.supervised_train_dataset.targets
+        elif dataset_name == 'stl10' or dataset_name == 'STL10':
+            self.class_to_idx_dict = {
+                "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+            }
+            self.train_lables = self.supervised_train_dataset.labels
+        
     def __len__(self):
         return len(self.supervised_train_dataset)
     
     def __getitem__(self, index):
-        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img, target= self.supervised_train_dataset.data[index],  self.train_lables[index]
+        
+        if img.shape[0] == 3:
+            img = np.transpose(img, (1, 2, 0))
         img = Image.fromarray(img)
 
         if self.contrastive_transform is not None:
@@ -399,15 +447,27 @@ class ContrastivePairPoisonDataset(Dataset):
     
     def __init__(self, dataset_name, noise, contrastive_transform=None ,train_transform=None, test_transform=None, target_transform=None) -> None:
         super().__init__()
-        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, noise, train_transform, test_transform)
+        self.supervised_train_dataset, self.supervised_test_dataset = load_poison_dataset(dataset_name, 
+                                                                                          noise,target_poison_class_name='all', train_transform=train_transform, test_transform=test_transform)
         self.contrastive_transform = contrastive_transform
         self.target_transform = target_transform
         
+        if dataset_name == 'cifar10' or dataset_name == 'CIFAR10':
+            self.class_to_idx_dict = self.supervised_train_dataset.class_to_idx
+            self.train_lables = self.supervised_train_dataset.targets
+        elif dataset_name == 'stl10' or dataset_name == 'STL10':
+            self.class_to_idx_dict = {
+                "airplane": 0, "bird": 1, "car": 2, "cat": 3, "deer": 4, "dog": 5, "horse": 6, "monkey": 7, "ship": 8, "truck": 9
+            }
+            self.train_lables = self.supervised_train_dataset.labels
     def __len__(self):
         return len(self.supervised_train_dataset)
     
     def __getitem__(self, index):
-        img, target= self.supervised_train_dataset.data[index], self.supervised_train_dataset.targets[index]
+        img, target= self.supervised_train_dataset.data[index], self.train_lables[index]
+        if img.shape[0] == 3:
+            img = np.transpose(img, (1, 2, 0))
+            
         img = Image.fromarray(img)
 
         if self.contrastive_transform is not None:
@@ -465,8 +525,21 @@ def create_simple_loader(dataset, args=None):
                                     shuffle=True, pin_memory=True,
                                     drop_last=False, num_workers=12)
     else:
-        # loader = DataLoader(a)
-        pass
+        if hasattr(args, 'batch_size'):
+            batch_size = args.batch_size
+        else:
+            batch_size = 256
+        if hasattr(args, 'shuffle'):
+            shuffle = args.shuffle
+        else:
+            shuffle = True
+        if hasattr(args, 'num_workers'):
+            num_workers = args.num_workers
+        else:
+            num_workers = 12
+        loader = DataLoader(dataset, batch_size=batch_size,
+                                    shuffle=shuffle, pin_memory=True,
+                                    drop_last=False, num_workers=num_workers)
     return loader
 
 
@@ -484,6 +557,34 @@ To244TensorTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
+To288TensorTrans = transforms.Compose([    
+    transforms.Resize((288,288)),
+    transforms.ToTensor()
+])
+
+# transforms for supervised learning
+To32TensorTrans = transforms.Compose([
+    transforms.Resize((32,32)),
+    transforms.ToTensor()
+])
+
+transform_supervised_train = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.RandomCrop(size=(64, 64)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(degrees=(-10, 10)),
+    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+    transforms.ColorJitter(brightness=0.3, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225]),
+    ])
+transform_supervised_test = transforms.Compose([
+    transforms.Resize(size=(96, 96)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225])
+    ])
 
 # transform for simclr
 # train transform for simclr

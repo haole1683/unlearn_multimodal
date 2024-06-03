@@ -10,7 +10,14 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": false,
+            // 参数
+            "args": [
+                "--device", "cuda:1",
+                // "--dataset", "stl10",
+                "--poisoned",
+                // "--fix_noise"
+            ]
         }
     ]
 }

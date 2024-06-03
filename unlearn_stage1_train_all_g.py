@@ -10,9 +10,6 @@ import random
 import torch
 from torch import nn
 import torch.backends.cudnn as cudnn
-from torch.cuda.amp import autocast, GradScaler
-import torch.nn.functional as F
-import torch.distributed as dist
 
 # Dataset
 from dataset import create_dataset, create_sampler, create_loader, normalize_fn
@@ -37,8 +34,8 @@ from tqdm import tqdm
 import logging
 import time
 
-import logging
-
+# distrubute
+from accelerate import Accelerator
 
 class jsonRecord:
     def __init__(self, path):

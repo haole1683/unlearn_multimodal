@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            // 参数
+            "args": [
+                "--device", "cuda:1",
+                "--poisoned"
+                // "--fix_noise"
+            ]
+        }
+    ]
+}

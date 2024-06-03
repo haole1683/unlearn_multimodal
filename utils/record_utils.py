@@ -4,6 +4,8 @@ import time
 import torch
 import json
 
+import logging
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 
@@ -23,6 +25,24 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
         self.max = max(self.max, val)
+    
+def setup_logging(log_file, level):
+    
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', datefmt='%Y-%m-%d,%H:%M:%S')
+
+    logging.root.setLevel(level)
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    for logger in loggers:
+        logger.setLevel(level)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logging.root.addHandler(stream_handler)
+
+    if log_file:
+        file_handler = logging.FileHandler(filename=log_file)
+        file_handler.setFormatter(formatter)
+        logging.root.addHandler(file_handler)
 
 
 def write_csv(result_dict, args):
@@ -127,3 +147,32 @@ class RecordSupervised(object):
     
     def get_result(self):
         return self.result
+    
+class jsonRecord:
+    def __init__(self, path):
+        self.data = {}
+        
+        # if path is a dictionary , concat result.json
+        if os.path.isdir(path):
+            path = os.path.join(path, 'result.json')
+            if os.path.exists(path):
+                os.remove(path)
+        self.path = path
+        
+        
+    def add(self, key, value):
+        self.data[key] = value
+        
+    def save(self):
+        with open(self.path, 'w') as f:
+            json.dump(self.data, f)
+            
+    def save_args(self, args):
+        self.data['args'] = vars(args)
+        self.save()
+    
+    def save_exp_res(self, exp_res : list):
+        if 'experiment_result' not in self.data:
+            self.data['experiment_result'] = exp_res
+        # self.data['experiment_result'].append(exp_res)
+        self.save()

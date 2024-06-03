@@ -5,8 +5,11 @@ import json
 def create_folder(path):
     Path(path).mkdir(parents=True, exist_ok=True) 
     
-def join_path(path, *paths):
-    return Path(path).joinpath(*paths)
+def join_path(path, *paths, to_string=True):
+    if to_string:
+        return str(Path(path).joinpath(*paths))
+    else:
+        return Path(path).joinpath(*paths)
 
 
 def record_result(result, folder_path):
