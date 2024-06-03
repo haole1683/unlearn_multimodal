@@ -34,7 +34,7 @@ from utils.clip_util import (
     clip_normalize
 )
 from utils.clip_util import (
-    CustomCLIP
+    CustomCLIP, Adapter
 )
 from test_attack_classify import test_zero_shot
 
@@ -67,8 +67,6 @@ def evalutate(model, clip_model_str):
         test_cifar_10_result = test_zero_shot(model)
     return test_cifar_10_result
 
-
-        
 
 def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
@@ -113,10 +111,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         if epoch==0 and i%step_size==0 and i<=warmup_iterations: 
             scheduler.step(i//step_size)  
-    
-    # print('After training1')
-    # evalutate(model, 'RN101')
-        
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     logging.info(f"Averaged stats: {metric_logger.global_avg()}")     
@@ -147,20 +142,21 @@ def main(args=None):
     logging.info("Creating model")
     model, _ = clip.load(args.clip_model, device, jit=False)
     
+    if args.from_scratch:
+        #### random init the model parameter
+        model.initialize_parameters()
     model = model.float()
+    
     tokenizer = clip.tokenize
-
     start_epoch = 0
 
     model = model.to(device)   
+    
     custom_model = CustomCLIP(model)
-
+    
     name_to_update = "adapter"
     for name, param in custom_model.named_parameters():
-        if name_to_update in name:
-            param.requires_grad_(True)
-        else:
-            param.requires_grad_(False)
+        param.requires_grad_(True)
 
     # Double check
     enabled = set()
@@ -182,7 +178,7 @@ def main(args=None):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    optimizer = torch.optim.AdamW(custom_model.adapter.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
@@ -229,7 +225,7 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(custom_model, args.clip_model)
+        result = evalutate(model, args.clip_model)
         result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
@@ -260,9 +256,11 @@ def main(args=None):
 
             
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()     
+
     parser.add_argument('--checkpoint', default='')   
-    parser.add_argument('--device', default='cuda:1')
+    parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -272,18 +270,17 @@ if __name__ == '__main__':
     
     # training
     parser.add_argument('--batch_size', default=256, type=int)
-    parser.add_argument('--lr', default=1e-5, type=float)
-    parser.add_argument('--max_epoch', default=100, type=int)
+    parser.add_argument('--lr', default=1e-2, type=float)
+    parser.add_argument('--max_epoch', default=400, type=int)
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
-    # aborded
-    parser.add_argument('--freeze_encoder', default='None', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
+    parser.add_argument('--freeze_encoder', default='text', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
     parser.add_argument('--from_scratch', action='store_true', help="train from scratch")
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_finetune_adapter/")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_from_scratch/")
     
     # noise
     parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN101/noise_gen2_46221-224-224_all_RN101.pt")

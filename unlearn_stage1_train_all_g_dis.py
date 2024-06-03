@@ -132,7 +132,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             
             alpha, beta, gamma = 1, 1, 1
             # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
-            total_loss = loss_contrastive_img_text * alpha
+            total_loss = loss_contrastive_img_text * alpha 
             # total_loss = loss_contrastive_img_text * alpha + loss_contrastive_img_aug
             # total_loss = loss_contrastive_img_text * alpha
             # total_loss = -loss_contrastive_unlearn_text * alpha
@@ -399,7 +399,7 @@ if __name__ == '__main__':
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn_temp')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn_with_min_loss')
     parser.add_argument('--overwrite', action='store_true')
     
     args = parser.parse_args()

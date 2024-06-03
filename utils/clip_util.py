@@ -123,7 +123,8 @@ class CustomCLIP(nn.Module):
         self.clip_model = clip_model
         self.logit_scale = clip_model.logit_scale
         self.dtype = clip_model.dtype
-        self.adapter = Adapter(1024, 4).to(clip_model.dtype).to(clip_model.text_projection.device)
+        self.image_feature_len = clip_model.text_projection.shape[1]
+        self.adapter = Adapter(self.image_feature_len, 4).to(clip_model.dtype).to(clip_model.text_projection.device)
             
     def forward(self, image, text):
         image_features = self.image_encoder(image.type(self.dtype))
@@ -145,3 +146,15 @@ class CustomCLIP(nn.Module):
         logits_per_text = logits_per_image.t()
 
         return logits_per_image, logits_per_text
+    
+    def encode_text(self, text):
+        return self.clip_model.encode_text(text)
+
+    def encode_image(self,image):
+        image_features = self.clip_model.encode_image(image.type(self.dtype))
+        x = self.adapter(image_features)
+
+        ratio = 0.2
+        image_features = ratio * x + (1 - ratio) * image_features
+
+        return image_features

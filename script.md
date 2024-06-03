@@ -24,6 +24,9 @@ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_
 ✅ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
 ## For both model version(RN101 + ViT-B/32) 
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=both --trainset=all --batch_size=32 --overwrite 
+## For Single model version - RN50 - Doing - with poison-natural image embedding loss
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50 --trainset=all --batch_size=8 --overwrite 
+
 
 # stage2 - generate noise from generator
 # Note: update_z_fre set max, not update z
