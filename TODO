@@ -89,3 +89,4 @@ idea：文生图模型，生成一张图像保护这张图片，生成的噪音�
 
 实验TODO：1.测试supervised条件下的噪音
 
+https://github.com/google-research-datasets/wit/blob/main/DATA.md
