@@ -278,11 +278,11 @@ def main(args):
     
     # dataset
     if args.trainset == 'all':
-        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion_cifar10.json"
+        json_path = "./data/laion_cifar10.json"
         clip_model_str = args.clip_model.replace("/", "_")
         args.output_dir = os.path.join(args.output_dir, "gen_all" + "-" + clip_model_str)
     elif args.trainset == 'cat':
-        json_path = "/remote-home/songtianwei/research/unlearn_multimodal/data/laion-cat-with-index-ttt.json"
+        json_path = "./data/laion-cat-with-index-ttt.json"
         clip_model_str = args.clip_model.replace("/", "_")
         args.output_dir = os.path.join(args.output_dir, "gen_cat" + "-" + clip_model_str)
         
@@ -385,7 +385,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()       
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--finetune_dataset', default='myLaion')
+    parser.add_argument('--finetune_dataset', default='myLaion', choices=['myLaion', 'coco'])
     
     parser.add_argument('--epoch', default=400, type=int)
     parser.add_argument('--batch_size', default=16, type=int)

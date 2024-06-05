@@ -173,18 +173,12 @@ def main(args=None):
 
     model = model.to(device)   
     
-    custom_model = CustomCLIP(model)
-    
-    name_to_update = "adapter"
-    for name, param in custom_model.named_parameters():
-        if name_to_update in name:
-            param.requires_grad_(True)
-        else:
-            param.requires_grad_(False)
+    for name, param in model.named_parameters():
+        param.requires_grad_(True)
 
     # Double check
     enabled = set()
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         if param.requires_grad:
             enabled.add(name)
     print(f"Parameters to be updated: {enabled}")
@@ -263,7 +257,7 @@ def main(args=None):
         logging.info(f"Epoch {epoch}, result: {result}")
         myJsonRecord.save_exp_res(result)
         
-        train_stats = train(model, custom_model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
+        train_stats = train(model, model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
         if distributed_utils.is_main_process():  
             # save the model to local

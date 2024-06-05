@@ -215,6 +215,52 @@ def load_poison_dataset(dataset_name, noise, target_poison_class_name='cat', tra
         print("!!!  The number of noise is not equal to the number of target class.  !!!")
 
     return unlearnable_train_dataset, test_dataset
+import os
+
+class cocoDataset(Dataset):
+
+    def __init__(self,split='train', text_transform=None, img_transform=None, contain_index=False):
+        self.train_json_path = "/data/projects/punim0619/datasets/coco2017/annotations/annotations/captions_train2017.json"
+        self.val_json_path = "/data/projects/punim0619/datasets/coco2017/annotations/annotations/captions_val2017.json"
+        self.split = split
+        if self.split == 'train':
+            self.json_data = json.load(open(self.train_json_path, 'r'))
+            self.path_prefix = "/data/projects/punim0619/datasets/coco2017/train2017/train2017"
+        elif self.split == 'val':
+            self.json_data = json.load(open(self.val_json_path, 'r'))
+            self.path_prefix = "/data/projects/punim0619/datasets/coco2017/val2017/val2017"
+        self.annotations = self.json_data['annotations']
+        self.image_id_to_caption_dict = {}
+        # construct the dict from image_id to caption
+        self.construct_id_dict()
+        self.image_data = self.json_data['images']
+        self.text_transform = text_transform
+        self.img_transform = img_transform
+        self.contain_index = contain_index
+
+    def __getitem__(self,idx):
+        image_sample = self.image_data[idx]
+        image_name, image_id = image_sample['file_name'], image_sample['id']
+        caption = self.image_id_to_caption_dict[image_id]
+        image_abs_path = os.path.join(self.path_prefix, image_name)
+        text = caption
+        img = Image.open(image_abs_path)
+        img = img.convert('RGB')
+        if self.text_transform:
+            text = self.text_transform(text)
+        if self.img_transform:
+            img = self.img_transform(img)
+        if self.contain_index:
+            return img, text, image_id
+        else:
+            return img, text
+
+    def construct_id_dict(self):
+        for data in self.annotations:
+            self.image_id_to_caption_dict[data['image_id']] = data['caption']
+
+    def __len__(self):
+        return len(self.image_data)
 
 class jsonDataset(Dataset):
     def __init__(self,json_path,text_transform=None, img_transform=None, contain_index=False):
@@ -635,3 +681,8 @@ _augmentations = nn.Sequential(
 def augmentations_kornia(sample):
     out = _augmentations(sample)
     return out
+
+if __name__ == "__main__":
+    # Load the dataset
+    dataset = cocoDataset()
+    image, text = dataset[0]
