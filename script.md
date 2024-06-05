@@ -225,4 +225,4 @@ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' 
 
 train clip from scratch on coco dataset
 
-python unlearn_stage3_test_finetune_clip_coco.py --device="cpu" --clip_model=RN50 --batch_size=8 --output_dir="./output/unlearn_train_from_scratch_on_coco/" --from_scratch --lr="1e-3" --finetune_dataset=coco
+python unlearn_stage3_test_finetune_clip_coco.py --device="cuda:0" --clip_model=RN50 --batch_size=8 --output_dir="./output/unlearn_train_from_scratch_on_coco/" --from_scratch --lr="1e-3" --finetune_dataset=myLaion
