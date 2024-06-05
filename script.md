@@ -11,7 +11,7 @@ python unlearn_stage1_train_all_g.py --clip_model=both --device=cuda:0 --overwri
 # stage1 - train generator script 
 Tip: each experiment cost about 2 days !!!
 ## For Single model RN50*4, the batch size need half(25G memory)
-✅ accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50x4 --trainset=all --batch_size=16 --overwrite
+accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50x4 --trainset=all --batch_size=8 --overwrite
 ## For Single model version - RN50 - Doing
 accelerate launch --config_file=accelerate_config.yaml unlearn_stage1_train_all_g_dis.py --clip_model=RN50 --trainset=all --batch_size=8 --overwrite 
 ## For Single model version - RN101 - Doing

@@ -90,6 +90,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         
         if args.img_transform == 'kornia':
             imgs_augmentations = augmentations_kornia(imgs)
+            imgs = imgs_augmentations
         
         text = tokenizer(batch[1], truncate=True)
         text = text.to(accelerator.device)
@@ -258,10 +259,21 @@ def process_clip_model(clip_model):
         if param.requires_grad:
             print("Added")
             enabled.add(name)
-    print(f"Parameters to be updated: {enabled}")
+    print(f"CLIP Parameters to be updated: {enabled}")
     
     return clip_model
 
+def process_generator(generator):
+    for name, param in generator.named_parameters():
+        param.requires_grad_(True)
+    # Double check
+    enabled = set()
+    for name, param in generator.named_parameters():
+        if param.requires_grad:
+            print("Added", end='\t')
+            enabled.add(name)
+    print(f"Generator Parameters to be updated: {enabled}")
+    return generator
 
 def main(args):
 
@@ -344,6 +356,7 @@ def main(args):
     text_embedding_dim = clip_models[0].text_projection.shape[1]
     generator = NetG(ngf=text_embedding_dim//8)
     generator.train()
+    generator = process_generator(generator)
 
     # optimizer
     # update the optimizer lr from 0.0001 -> 0.01
@@ -387,7 +400,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--finetune_dataset', default='myLaion', choices=['myLaion', 'coco'])
     
-    parser.add_argument('--epoch', default=400, type=int)
+    parser.add_argument('--epoch', default=503, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
@@ -399,7 +412,7 @@ if __name__ == '__main__':
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn_with_min_loss')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn')
     parser.add_argument('--overwrite', action='store_true')
     
     args = parser.parse_args()
