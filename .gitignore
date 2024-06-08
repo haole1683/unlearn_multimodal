@@ -9,3 +9,4 @@ tmp*
 *.jpg
 /output_ori/
 *.log
+slurm*
