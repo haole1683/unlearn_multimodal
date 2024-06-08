@@ -1053,6 +1053,11 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
     for class_name in test_set.classes:
         correct_count[class_name] = 0
         
+    if test_set.filename.startswith('stl10'):
+        all_classes = ['airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck']
+        class_to_idx_dict = {class_name: idx for idx, class_name in enumerate(all_classes)}
+    else:
+        class_to_idx_dict = test_set.class_to_idx
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for i, (images, target) in enumerate(tqdm(test_dataloader)):

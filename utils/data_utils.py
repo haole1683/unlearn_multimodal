@@ -349,13 +349,7 @@ def load_folder_data(folder_path):
     return ImageFolder(root=folder_path, transform=transforms.ToTensor())
 
 def get_dataset_class(dataset_name):
-    """Get the classes name of the dataset.
-
-    Args:
-        dataset_name (str): the name of the dataset
-    """
-    train_dataset = load_class_dataset(dataset_name, None)[0]
-    return train_dataset.classes
+    pass
 
 import torch
 from torchvision import datasets, transforms

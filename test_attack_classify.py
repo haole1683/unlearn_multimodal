@@ -14,8 +14,20 @@ from utils.record_utils import record_result
 from utils.clip_util import _convert_image_to_rgb, clip_transform_224, clip_normalize, prompt_templates, zeroshot_classifier, clip_transform_256, clip_transform_288
 from utils.data_utils import load_class_dataset
 from utils.evaluate import test_linear_probe, test_linear_probe_noise, test_linear_probe_patch, accuracy, zero_shot, test_linear_probe_unlearn, zero_shot_with_each_class_acc
+from utils.data_utils import get_dataset_class
 
-def test_zero_shot(model, clip_version=None):
+def evaluate_zero_shot(model):
+    test_cifar_10_result = test_zero_shot(model, dataset_name="CIFAR10")
+    test_cifar_100_result = test_zero_shot(model, dataset_name='CIFAR100')
+    test_stl_10_result = test_zero_shot(model, dataset_name='STL10')
+    result_dict = {
+        "cifar10": test_cifar_10_result,
+        "cifar100": test_cifar_100_result,
+        "stl10": test_stl_10_result
+    }
+    return result_dict
+
+def test_zero_shot(model, dataset_name='cifar10'):
     if isinstance(model, str):
         device = "cuda:0"
         model, preprocess = clip.load(model, device)
@@ -23,14 +35,17 @@ def test_zero_shot(model, clip_version=None):
         # device = model.adapter.fc.device
         if hasattr(model, "clip_model"):
             device = model.clip_model.text_projection.device
+            text_project_shape = model.clip_model.text_projection.shape
         else:
             device = model.text_projection.device
+            text_project_shape = model.text_projection.shape
         
     model.eval()
-    # load dataset
-    dataset_name = "CIFAR10"
+    # "RN101" -> [512,512], "ViT-B/16" -> [512,512]
+    # "RN50"  -> [512,1024],"ViT-B/32" -> [512,512]
+    # "RN50x4"-> [640,640]
     # clip_transform -> default 224 * 224
-    if clip_version == 'RN50x4':
+    if text_project_shape[0] == 640:
         clip_transform = clip_transform_288
     else:
         clip_transform = clip_transform_224
@@ -92,7 +107,7 @@ def main(args):
     generator = generator.to(device)
     
     # load dataset
-    train_dataset, test_dataset = load_class_dataset(args.dataset, clip_transform)
+    train_dataset, test_dataset = load_class_dataset(args.dataset, clip_transform_224)
     
     batch_size = args.batch_size
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)

@@ -158,3 +158,4 @@ class CustomCLIP(nn.Module):
         image_features = ratio * x + (1 - ratio) * image_features
 
         return image_features
+    

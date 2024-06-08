@@ -235,6 +235,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
+    parser.add_argument('--backbone', default='resnet18', choices=['resnet18', 'resnet50', 'resnet101'])
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')

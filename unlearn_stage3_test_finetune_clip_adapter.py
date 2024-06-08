@@ -36,37 +36,10 @@ from utils.clip_util import (
 from utils.clip_util import (
     CustomCLIP
 )
-from test_attack_classify import test_zero_shot
-
-class jsonRecord:
-    def __init__(self, path):
-        self.data = {}
-        self.path = path
-        
-    def add(self, key, value):
-        self.data[key] = value
-        
-    def save(self):
-        with open(self.path, 'w') as f:
-            json.dump(self.data, f)
-            
-    def save_args(self, args):
-        self.data['args'] = vars(args)
-        self.save()
-    
-    def save_exp_res(self, exp_res : dict):
-        if 'experiment_result' not in self.data:
-            self.data['experiment_result'] = []
-        self.data['experiment_result'].append(exp_res)
-        self.save()
-
-def evalutate(model, clip_model_str):
-    if clip_model_str == "RN50x4":
-        test_cifar_10_result = test_zero_shot(model, clip_version='RN50x4')
-    else:
-        test_cifar_10_result = test_zero_shot(model)
-    return test_cifar_10_result
-
+from utils.record_utils import (
+    jsonRecord
+)
+from test_attack_classify import test_zero_shot, evaluate_zero_shot
 
         
 
@@ -113,9 +86,6 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         if epoch==0 and i%step_size==0 and i<=warmup_iterations: 
             scheduler.step(i//step_size)  
-    
-    # print('After training1')
-    # evalutate(model, 'RN101')
         
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -229,7 +199,7 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(custom_model, args.clip_model)
+        result = evaluate_zero_shot(custom_model)
         result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
@@ -283,10 +253,10 @@ if __name__ == '__main__':
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_finetune_adapter/")
+    parser.add_argument('--output_dir', default="./outputNew/unlearn_stage3_test_clip_finetune_adapter/")
     
     # noise
-    parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN101/noise_gen2_46221-224-224_all_RN101.pt")
+    parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     
