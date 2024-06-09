@@ -226,3 +226,26 @@ python unlearn_stage3_test_supervised.py --dataset='cifar100' --device='cuda:0' 
 train clip from scratch on coco dataset
 
 python unlearn_stage3_test_finetune_clip_coco.py --device="cuda:0" --clip_model=RN50 --batch_size=8 --output_dir="./output/unlearn_train_from_scratch_on_coco/" --from_scratch --lr="1e-3" --finetune_dataset=myLaion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Group 1
+2 - python unlearn_stage3_test_finetune_clip_adapter.py --device='cuda:0' --clip_model=RN50 
+3 - python unlearn_stage3_test_finetune_clip_adapter.py --device='cuda:1' --clip_model=RN50 --poisoned --noise_path="./output/unlearn_stage2_generate_noise/RN50/noise_gen2_46221-224-224_all_RN50.pt" 
+4 - python unlearn_stage3_test_finetune_clip_adapter.py --device='cuda:2' --clip_model=ViT-B/16 
+5 - python unlearn_stage3_test_finetune_clip_adapter.py --device='cuda:3' --clip_model=ViT-B/16 --poisoned --noise_path="./output/unlearn_stage2_generate_noise/ViT-B_16/all/classWise/noise_gen2_46221-224-224_all_ViT-B-16.pt"

@@ -198,14 +198,6 @@ def main(args):
         
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
-        
-        # test fix noise 
-        if args.fix_noise:
-            tgt_shape = noise[0].shape
-            noise = torch.randn_like(noise[0])
-            noise = torch.stack([noise] * 5000)
-            noise = limit_noise(noise, noise_shape=tgt_shape, norm_type="l2", epsilon=8, device=args.device)
-            
         poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
     else:
@@ -239,9 +231,6 @@ if __name__ == '__main__':
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')
-    
-    # fix noise
-    parser.add_argument('--fix_noise', action='store_true')
     
     # used for test
     parser.add_argument('--test', action='store_true')

@@ -10,3 +10,4 @@ tmp*
 /output_ori/
 *.log
 slurm*
+./outputNew

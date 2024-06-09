@@ -39,7 +39,7 @@ from utils.clip_util import (
 from utils.record_utils import (
     jsonRecord
 )
-from test_attack_classify import test_zero_shot, evaluate_zero_shot
+from test_attack_classify import test_zero_shot_and_linear, evaluate_zero_shot_and_linear
 
         
 
@@ -199,15 +199,18 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evaluate_zero_shot(custom_model)
-        result['epoch'] = epoch
-        print(result)
-        logging.info(f"Epoch {epoch}, result: {result}")
-        myJsonRecord.save_exp_res(result)
+        # Test acc
+        if distributed_utils.is_main_process() and epoch % 50 == 0:
+            result = evaluate_zero_shot_and_linear(custom_model)
+            result['epoch'] = epoch
+            print(result)
+            logging.info(f"Epoch {epoch}, result: {result}")
+            myJsonRecord.save_exp_res(result)
         
         train_stats = train(model, custom_model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
-        if distributed_utils.is_main_process():  
+        # Save checkpoint
+        if distributed_utils.is_main_process() and False:  
             # save the model to local
             tgt_path = "./output/unlearn_finetune_clip"
             clip_version = args.clip_model.replace('/','_')
@@ -215,7 +218,11 @@ def main(args=None):
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch_{epoch}.pth"))
             else:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch_{epoch}.pth"))        
-           
+        
+        # save loss res
+        if distributed_utils.is_main_process():  
+            myJsonRecord.save_loss_item(epoch, train_stats)
+            
         lr_scheduler.step(epoch+warmup_steps+1)  
         if args.distributed:
             dist.barrier()     
@@ -232,7 +239,7 @@ def main(args=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--checkpoint', default='')   
-    parser.add_argument('--device', default='cuda:1')
+    parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -241,12 +248,12 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='myLaion')
     
     # training
-    parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--batch_size', default=1024, type=int)
     parser.add_argument('--lr', default=1e-5, type=float)
-    parser.add_argument('--max_epoch', default=100, type=int)
+    parser.add_argument('--max_epoch', default=105, type=int)
 
     # poisoning
-    parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
+    parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     # aborded
     parser.add_argument('--freeze_encoder', default='None', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
     parser.add_argument('--from_scratch', action='store_true', help="train from scratch")

@@ -169,3 +169,9 @@ class jsonRecord:
             self.data['experiment_result'] = []
         self.data['experiment_result'].append(exp_res)
         self.save()
+        
+    def save_loss_item(self, epoch, loss_item):
+        if 'loss' not in self.data:
+            self.data['loss'] = {}
+        self.data['loss'][epoch] = loss_item
+        self.save()

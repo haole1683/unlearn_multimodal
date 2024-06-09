@@ -3,7 +3,10 @@ import pickle
 
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import  MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB
+from torchvision.datasets import  (
+    MNIST, CIFAR10, CIFAR100, ImageNet, STL10, GTSRB, SVHN, Food101, DTD, StanfordCars as Cars,
+    FGVCAircraft as FGVC, Flowers102, OxfordIIITPet
+)
 
 import numpy as np
 import json
@@ -104,7 +107,7 @@ def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
     elif dataset_name == 'CIFAR100':
         train_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True, transform=train_transform)
         test_dataset = CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, transform=test_transform)
-    elif dataset_name == 'ImageNet':
+    elif dataset_name == 'IMAGENET':
         train_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='train', transform=train_transform)
         test_dataset = ImageNet(root="/remote-home/songtianwei/research/unlearn_multimodal/data/imagenet", split='val', transform=test_transform)
     elif dataset_name == 'STL10' or dataset_name == 'stl10':
@@ -113,7 +116,27 @@ def load_class_dataset(dataset_name, train_transform=None, test_transform=None):
     elif dataset_name == 'GTSRB':
         train_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
         test_dataset = GTSRB(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
-        prompt_template = "A photo of a traffic sign of {}."
+    elif dataset_name == 'SVHN':
+        train_dataset = SVHN(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = SVHN(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'FOOD101':
+        train_dataset = Food101(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = Food101(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'DTD':
+        train_dataset = DTD(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = DTD(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'CARS':
+        train_dataset = Cars(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = Cars(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'FGVC':
+        train_dataset = FGVC(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = FGVC(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'FLOWERS102':
+        train_dataset = Flowers102(root=os.path.expanduser("~/.cache"), download=True, split='train', transform=train_transform)
+        test_dataset = Flowers102(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
+    elif dataset_name == 'PETS':
+        train_dataset = OxfordIIITPet(root=os.path.expanduser("~/.cache"), download=True, split='trainval', transform=train_transform)
+        test_dataset = OxfordIIITPet(root=os.path.expanduser("~/.cache"), download=True, split='test', transform=test_transform)
     else:
         raise NotImplementedError
     

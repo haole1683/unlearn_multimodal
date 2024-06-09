@@ -892,7 +892,7 @@ def test_linear_probe(trainloader,testloader,device,model,arg):
     print(f"Accuracy = {accuracy:.3f}")
     return accuracy
 
-def test_linear_probe(trainloader,testloader,device,model,arg, process_fn=None):
+def test_linear_probe(trainloader,testloader,device,model, process_fn=None):
     def get_features(dataloader, process_fn=None):
         all_features = []
         all_labels = []
@@ -1082,7 +1082,7 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
             predicted = logits.argmax(1)
 
             for class_name in test_set.classes:
-                class_label = test_set.class_to_idx[class_name]
+                class_label = class_to_idx_dict[class_name]
                 correct_count[class_name] += ((predicted == labels) & (labels == class_label)).sum().item()
                 
             n += images.size(0)
@@ -1100,13 +1100,7 @@ def zero_shot_with_each_class_acc(test_dataloader,test_set,model,zeroshot_weight
         print("The category {} : acc: {}%".format(key, correct_count[key] / 1000))
     return top1, top5, class_acc
 
-def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
-    
-    cat_correct, cat_total = 0,0
-    cat_label = 3
-    ship_label = 8
-    ship_correct, ship_total = 0,0
-    
+def zero_shot(test_dataloader, model, zeroshot_weights, device, process_fn=None):
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         tgt_top1 = 0.
@@ -1128,35 +1122,14 @@ def zero_shot(test_dataloader,model,zeroshot_weights,device,process_fn=None):
             top1 += acc1
             top5 += acc5
             
-            labels = target
-            predicted = logits.argmax(1)
-            cat_total += (labels == cat_label).sum().item()
-            cat_correct += ((predicted == labels) & (labels == cat_label)).sum().item()
-
-            ship_total += (labels == ship_label).sum().item()
-            ship_correct += ((predicted == labels) & (labels == ship_label)).sum().item()
-            
-            
-            # measure target attack accuary
-            tgt_attack_tgt = torch.tensor(2).to(device)
-            tgt_atk_acc1 = cal_target_attack_acc(logits, target, tgt_attack_tgt)
-            tgt_top1 += tgt_atk_acc1
-            
             n += images.size(0)
 
     top1 = (top1 / n) * 100
     top5 = (top5 / n) * 100
     
     # measure the specific class accuary 
-    
-    
-    tgt_top1 = (tgt_top1 / n) * 100
-
     print(f"Top-1 accuracy: {top1}")
     print(f"Top-5 accuracy: {top5}")
-    print(f"Target attack accuracy: {tgt_top1}")
-    print(f"Cat accuracy: {cat_correct/cat_total}")
-    print(f"Ship accuracy: {ship_correct/ship_total}")
     return top1, top5
 
 
