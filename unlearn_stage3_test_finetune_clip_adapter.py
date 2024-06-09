@@ -90,7 +90,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     logging.info(f"Averaged stats: {metric_logger.global_avg()}")     
-    return {k: "{:.3f}".format(meter.global_avg) for k, meter in metric_logger.meters.items()}  
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}  
 
 
 
