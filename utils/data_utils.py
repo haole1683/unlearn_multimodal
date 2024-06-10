@@ -326,13 +326,10 @@ class jsonPoisonDataset(Dataset):
         if self.img_transform:
             img = self.img_transform(img)
         
-        # if label_class == 'cat':
         the_noise_index = index % len(self.noise_list)
         the_noise = self.noise_list[the_noise_index]
         the_noise = the_noise.to(img.device)
         the_img = torch.clamp(img + the_noise, min=0, max=1)
-        # else:
-            # the_img = img
             
         if self.contain_index:
             return the_img, text, index

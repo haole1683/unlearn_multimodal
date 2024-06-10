@@ -61,8 +61,8 @@ def test_zero_shot_and_linear(model, dataset_name='cifar10'):
     else:
         clip_transform = clip_transform_224
     train_dataset, test_dataset = load_class_dataset(dataset_name, clip_transform, clip_transform)
-    train_batch_size = 1024
-    test_batch_size = 1024
+    train_batch_size = 512
+    test_batch_size = 512
     test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size, shuffle=False)
     
     process_fn = clip_normalize

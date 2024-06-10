@@ -34,41 +34,15 @@ from utils.clip_util import (
     clip_normalize
 )
 from utils.clip_util import (
-    CustomCLIP, Adapter
+    CustomCLIP
 )
-from test_attack_classify import test_zero_shot
-
-class jsonRecord:
-    def __init__(self, path):
-        self.data = {}
-        self.path = path
-        
-    def add(self, key, value):
-        self.data[key] = value
-        
-    def save(self):
-        with open(self.path, 'w') as f:
-            json.dump(self.data, f)
-            
-    def save_args(self, args):
-        self.data['args'] = vars(args)
-        self.save()
-    
-    def save_exp_res(self, exp_res : dict):
-        if 'experiment_result' not in self.data:
-            self.data['experiment_result'] = []
-        self.data['experiment_result'].append(exp_res)
-        self.save()
-
-def evalutate(model, clip_model_str):
-    if clip_model_str == "RN50x4":
-        test_cifar_10_result = test_zero_shot(model, clip_version='RN50x4')
-    else:
-        test_cifar_10_result = test_zero_shot(model)
-    return test_cifar_10_result
+from utils.record_utils import (
+    jsonRecord
+)
+from test_attack_classify import test_zero_shot_and_linear, evaluate_zero_shot_and_linear
 
 
-def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
+def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
     model.train()  
     
@@ -98,7 +72,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
         image = clip_normalize(image)
 
         with autocast():
-            logits_per_image, logits_per_caption = custom_model(image, text)
+            logits_per_image, logits_per_caption = model(image, text)
             ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
@@ -142,9 +116,8 @@ def main(args=None):
     logging.info("Creating model")
     model, _ = clip.load(args.clip_model, device, jit=False)
     
-    if args.from_scratch:
-        #### random init the model parameter
-        model.initialize_parameters()
+    #### from scrach : random init the model parameter
+    model.initialize_parameters()
     model = model.float()
     
     tokenizer = clip.tokenize
@@ -152,15 +125,12 @@ def main(args=None):
 
     model = model.to(device)   
     
-    custom_model = CustomCLIP(model)
-    
-    name_to_update = "adapter"
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         param.requires_grad_(True)
 
     # Double check
     enabled = set()
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         if param.requires_grad:
             enabled.add(name)
     print(f"Parameters to be updated: {enabled}")
@@ -225,15 +195,18 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(model, args.clip_model)
-        result['epoch'] = epoch
-        print(result)
-        logging.info(f"Epoch {epoch}, result: {result}")
-        myJsonRecord.save_exp_res(result)
+        # Test acc
+        if distributed_utils.is_main_process() and epoch % 50 == 0:
+            result = evaluate_zero_shot_and_linear(model)
+            result['epoch'] = epoch
+            print(result)
+            logging.info(f"Epoch {epoch}, result: {result}")
+            myJsonRecord.save_exp_res(result)
         
-        train_stats = train(model, custom_model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
+        train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
-        if distributed_utils.is_main_process():  
+        # Save checkpoint
+        if distributed_utils.is_main_process() and False:  
             # save the model to local
             tgt_path = "./output/unlearn_finetune_clip"
             clip_version = args.clip_model.replace('/','_')
@@ -241,7 +214,11 @@ def main(args=None):
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_poison_epoch_{epoch}.pth"))
             else:
                 torch.save(model_without_ddp.state_dict(), os.path.join(tgt_path, f"model_{clip_version}_epoch_{epoch}.pth"))        
-           
+        
+        # save loss res
+        if distributed_utils.is_main_process():  
+            myJsonRecord.save_loss_item(epoch, train_stats)
+            
         lr_scheduler.step(epoch+warmup_steps+1)  
         if args.distributed:
             dist.barrier()     
@@ -253,6 +230,7 @@ def main(args=None):
 
     if distributed_utils.is_main_process():   
         pass           
+   
 
             
 if __name__ == '__main__':
@@ -269,28 +247,24 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='myLaion')
     
     # training
-    parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--batch_size', default=512, type=int)
     parser.add_argument('--lr', default=1e-2, type=float)
-    parser.add_argument('--max_epoch', default=400, type=int)
+    parser.add_argument('--max_epoch', default=105, type=int)
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     parser.add_argument('--freeze_encoder', default='text', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
-    parser.add_argument('--from_scratch', action='store_true', help="train from scratch")
-    
+
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./output/unlearn_stage3_test_clip_from_scratch/")
+    parser.add_argument('--output_dir', default="./outputNew/unlearn_stage3_test_clip_from_scratch/")
     
     # noise
     parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise/RN101/noise_gen2_46221-224-224_all_RN101.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     
-    if args.from_scratch:
-        args.output_dir = os.path.join(args.output_dir, "from_scratch")
-    else:
-        args.output_dir = os.path.join(args.output_dir, "from_pretrain")
+    args.output_dir = os.path.join(args.output_dir, "from_scratch")
     
     if args.poisoned:
         args.output_dir = os.path.join(args.output_dir, "poisoned")

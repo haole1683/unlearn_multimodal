@@ -43,7 +43,7 @@ from test_attack_classify import test_zero_shot_and_linear, evaluate_zero_shot_a
 
         
 
-def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
+def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
     # train
     model.train()  
     
@@ -73,7 +73,7 @@ def train(model, custom_model, data_loader, optimizer, tokenizer, epoch, warmup_
         image = clip_normalize(image)
 
         with autocast():
-            logits_per_image, logits_per_caption = custom_model(image, text)
+            logits_per_image, logits_per_caption = model(image, text)
             ground_truth = torch.arange(batch_size, dtype=torch.long, device=device)
             total_loss = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
         
@@ -123,10 +123,10 @@ def main(args=None):
     start_epoch = 0
 
     model = model.to(device)   
-    custom_model = CustomCLIP(model)
+    model = CustomCLIP(model)
 
     name_to_update = "adapter"
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         if name_to_update in name:
             param.requires_grad_(True)
         else:
@@ -134,7 +134,7 @@ def main(args=None):
 
     # Double check
     enabled = set()
-    for name, param in custom_model.named_parameters():
+    for name, param in model.named_parameters():
         if param.requires_grad:
             enabled.add(name)
     print(f"Parameters to be updated: {enabled}")
@@ -152,7 +152,7 @@ def main(args=None):
     # arg_sche = utils.AttrDict(schedular_dict)
     # lr_scheduler, _ = create_scheduler(arg_sche, optimizer)  
     
-    optimizer = torch.optim.AdamW(custom_model.adapter.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
+    optimizer = torch.optim.AdamW(model.adapter.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1.0e-6, weight_decay=0.2)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=1e-6)
     
     finetune_dataset = args.finetune_dataset
@@ -200,14 +200,14 @@ def main(args=None):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
         # Test acc
-        if distributed_utils.is_main_process() and epoch % 50 == 0:
-            result = evaluate_zero_shot_and_linear(custom_model)
+        if distributed_utils.is_main_process() and epoch % 20 == 0:
+            result = evaluate_zero_shot_and_linear(model)
             result['epoch'] = epoch
             print(result)
             logging.info(f"Epoch {epoch}, result: {result}")
             myJsonRecord.save_exp_res(result)
         
-        train_stats = train(model, custom_model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
+        train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
         # Save checkpoint
         if distributed_utils.is_main_process() and False:  
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     
     # training
     parser.add_argument('--batch_size', default=1024, type=int)
-    parser.add_argument('--lr', default=1e-5, type=float)
+    parser.add_argument('--lr', default=1e-2, type=float)
     parser.add_argument('--max_epoch', default=105, type=int)
 
     # poisoning
