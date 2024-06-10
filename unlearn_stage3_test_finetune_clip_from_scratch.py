@@ -202,6 +202,7 @@ def main(args=None):
             print(result)
             logging.info(f"Epoch {epoch}, result: {result}")
             myJsonRecord.save_exp_res(result)
+            pass
         
         train_stats = train(model, train_loader, optimizer, tokenizer, epoch, warmup_steps, device, lr_scheduler)  
         
@@ -247,7 +248,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='myLaion')
     
     # training
-    parser.add_argument('--batch_size', default=512, type=int)
+    parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--lr', default=1e-2, type=float)
     parser.add_argument('--max_epoch', default=105, type=int)
 
