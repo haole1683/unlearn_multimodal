@@ -34,38 +34,12 @@ from utils.clip_util import (
     clip_normalize
 )
 from utils.clip_util import (
-    CustomCLIP, Adapter
+    CustomCLIP
 )
-from test_attack_classify import test_zero_shot
-
-class jsonRecord:
-    def __init__(self, path):
-        self.data = {}
-        self.path = path
-        
-    def add(self, key, value):
-        self.data[key] = value
-        
-    def save(self):
-        with open(self.path, 'w') as f:
-            json.dump(self.data, f)
-            
-    def save_args(self, args):
-        self.data['args'] = vars(args)
-        self.save()
-    
-    def save_exp_res(self, exp_res : dict):
-        if 'experiment_result' not in self.data:
-            self.data['experiment_result'] = []
-        self.data['experiment_result'].append(exp_res)
-        self.save()
-
-def evalutate(model, clip_model_str):
-    if clip_model_str == "RN50x4":
-        test_cifar_10_result = test_zero_shot(model, clip_version='RN50x4')
-    else:
-        test_cifar_10_result = test_zero_shot(model)
-    return test_cifar_10_result
+from utils.record_utils import (
+    jsonRecord
+)
+from test_attack_classify import test_zero_shot_and_linear, evaluate_zero_shot_and_linear
 
 
 def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device, scheduler):
@@ -159,20 +133,6 @@ def main(args=None):
 
     start_epoch = 0
 
-    # if args.freeze_encoder == 'image' or args.freeze_encoder == 'both':
-    #     freeze_encoder = model.visual
-    #     for param in freeze_encoder.parameters():
-    #         param.requires_grad = False
-    # if args.freeze_encoder == 'text' or args.freeze_encoder == 'both':
-    #     freeze_encoder = model.transformer
-    #     for param in freeze_encoder.parameters():
-    #         param.requires_grad = False
-    # model.token_embedding.requires_grad = False
-    # model.positional_embedding.requires_grad = False
-    # model.ln_final.requires_grad = False
-    # model.text_projection.requires_grad = False
-    # model.logit_scale.requires_grad = False
-
     model = model.to(device)   
     
     # custom_model = CustomCLIP(model)
@@ -251,7 +211,7 @@ def main(args=None):
     for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
-        result = evalutate(model, args.clip_model)
+        result = evaluate_zero_shot_and_linear(model, args.clip_model)
         result['epoch'] = epoch
         print(result)
         logging.info(f"Epoch {epoch}, result: {result}")
