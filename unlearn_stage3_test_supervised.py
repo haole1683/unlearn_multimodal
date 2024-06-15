@@ -195,6 +195,26 @@ def main(args):
     
     train_transform = To32TensorTrans
     test_transform = To32TensorTrans
+    
+    import torchvision
+    train_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(size=(96, 96)),
+        torchvision.transforms.RandomCrop(size=(64, 64)),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.RandomRotation(degrees=(-10, 10)),
+        torchvision.transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+        torchvision.transforms.ColorJitter(brightness=0.3, hue=0.1),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                        std=[0.229, 0.224, 0.225])
+    ])
+
+    test_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(size=(96, 96)),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                        std=[0.229, 0.224, 0.225])
+    ])
         
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
@@ -215,15 +235,15 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:3')
-    parser.add_argument('--dataset', default='cifar100', choices=['cifar10', 'stl10', 'cifar100'])
+    parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise/ViT-B-16/cifar10/noise_gen1_ViT-B-16_cifar10_all.pt')
-    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/stage1_train_g_unlearn/all/classWise/noise_gen1_ViT-B-32_stl10_all.pt')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised_temp/')
     
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     # For train  
-    parser.add_argument('--max_epoch', default=40, type=int)
+    parser.add_argument('--max_epoch', default=100, type=int)
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
@@ -231,10 +251,6 @@ if __name__ == '__main__':
     
     # for model(pretrained or not)
     parser.add_argument('--pretrained', action='store_true')
-    
-    # used for test
-    parser.add_argument('--test', action='store_true')
-    parser.add_argument('--test_folder', default='./output/unlearn_test_supervised/')
     
     parser.add_argument('--test_train_type', default='supervised')
     

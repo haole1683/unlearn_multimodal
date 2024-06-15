@@ -286,14 +286,14 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
     parser.add_argument('--device', default='cuda:1')
-    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen_all-ViT-B_16/checkpoint/generator_best_epoch-235_loss-0.03984706313345276.pth")
-    parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise/")
+    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-340_loss-0.08368754915054484.pth")
+    parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise_temp1/")
     
-    parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='ViT-B/32', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
     parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10', 'cifar100'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--gen_which', default='gen2', choices=['gen1', 'gen2', 'all'])
+    parser.add_argument('--gen_which', default='all', choices=['gen1', 'gen2', 'all'])
     # generate noise hyper parameter
     # Here, z freq means the frequency of updating z (generator latent input)
     # if 1 , then every batch update z_input

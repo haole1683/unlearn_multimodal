@@ -18,18 +18,18 @@ from utils.data_utils import get_dataset_class
 
 def evaluate_zero_shot_and_linear(model):
     test_dataset_names = [
-        "MNIST",  # √
+        # "MNIST",  # √
         "CIFAR10", # √
-        "CIFAR100", # √
+        # "CIFAR100", # √
         # "ImageNet", # √ zero-shot ：30 mins on 3090Ti，linear probe cost much 10 hs on 3090Ti
-        "STL10", # √ 
-        "GTSRB", # √ no classes 
-        "SVHN", # √ no classes
+        # "STL10", # √ 
+        # "GTSRB", # √ no classes 
+        # "SVHN", # √ no classes
         # "Food101", # √ zero-shot ：7 mins on 3090Ti，linear probe cost 25 mins
-        "DTD", # √
+        # "DTD", # √
         # "Cars", # HTTP not found
-        "FGVC", # √
-        "Pets", # √
+        # "FGVC", # √
+        # "Pets", # √
     ]
     result_dict = {}
     for dataset_name in test_dataset_names:
@@ -80,7 +80,7 @@ def test_zero_shot_and_linear(model, dataset_name='cifar10'):
         # top1, top5, class_acc = zero_shot_with_each_class_acc(test_dataloader,test_set=test_dataset, model, zeroshot_weights, device, process_fn=process_fn)
     print(f"Zero shot result: top1: {top1}, top5: {top5}")
     ################## linear probe #########################
-    not_linear_probe_dataset = ["ImageNet"]
+    not_linear_probe_dataset = ["ImageNet", 'CIFAR10']
     print("Start linear probe")
     if dataset_name in not_linear_probe_dataset:
         print(f"Linear probe is not supported on {dataset_name}")
