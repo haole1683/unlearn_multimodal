@@ -3,7 +3,7 @@ from models.ResNet import ResNet18
 from utils.data_utils import (
     load_poison_dataset, load_class_dataset,
     To32TensorTrans, To244TensorTrans,
-    transform_supervised_train,transform_supervised_test
+    transform_supervised_train,transform_supervised_test,
 )
 from utils.noise_utils import (
     limit_noise
@@ -23,7 +23,9 @@ from torchvision.models import (
     resnet18 as torchvision_resnet18,
     resnet50 as torchvision_resnet50,
     resnet101 as torchvision_resnet101,
-    ResNet18_Weights, ResNet50_Weights
+    ResNet18_Weights, ResNet50_Weights, ResNet101_Weights,
+    VisionTransformer,
+    ViT_B_16_Weights, ViT_B_32_Weights, ViT_L_16_Weights, ViT_L_32_Weights
 )
 from torchvision import transforms
 from torch.utils.data import (DataLoader)
@@ -46,25 +48,36 @@ def test_supervised(trainDataset, testDataset, args):
                                     shuffle=False, pin_memory=True,
                                     drop_last=False, num_workers=12)
     device = args.device
-    # model = ResNet18()
-    if args.pretrained:
-        print("Using pretrained model - ResNet18 - IMAGENET1K_V1")
-        model = torchvision_resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        # if args.dataset == 'cifar10' or args.dataset == 'cifar100':
-        #     print("Using pretrained model - ResNet18 - IMAGENET1K_V1")
-        #     model = torchvision_resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        # elif args.dataset == 'stl10':
-        #     print("Using pretrained model - ResNet50 - IMAGENET1K_V1")
-        #     model = torchvision_resnet101(weights=ResNet50_Weights.IMAGENET1K_V1)
-    else:
-        print("Using scratched model - ResNet18")
-        model = torchvision_resnet18(pretrained=False)
-        # if args.dataset == 'cifar10' or args.dataset == 'cifar100':
-        #     print("Using scratched model - ResNet18")
-        #     model = torchvision_resnet18(pretrained=False)
-        # elif args.dataset == 'stl10':
-        #     print("Using scratched model - ResNet50")
-        #     model = torchvision_resnet101(pretrained=False)
+
+    if args.pretrained: # use pretrained model
+        if args.backbone == 'resnet18':
+            print("Using pretrained model - ResNet18 - IMAGENET1K_V1")
+            model = torchvision_resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        elif args.backbone == 'resnet50':
+            print("Using pretrained model - ResNet50 - IMAGENET1K_V1")
+            model = torchvision_resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        elif args.backbone == 'resnet101':
+            print("Using pretrained model - ResNet101 - IMAGENET1K_V1")
+            model = torchvision_resnet101(weights=ResNet101_Weights.IMAGENET1K_V1)
+        elif args.backbone == 'ViT-B_16':
+            print("Using pretrained model - ViT-B_16 - IMAGENET2")
+            model = VisionTransformer(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        elif args.backbone == 'ViT-B_32':
+            print("Using pretrained model - ViT-B_32 - IMAGENET2")
+            model = VisionTransformer(weights=ViT_B_32_Weights.IMAGENET1K_V1)
+    else:   # use scratch model
+        if args.backbone == 'resnet18':
+            model = torchvision_resnet18()
+        elif args.backbone == 'resnet50':
+            model = torchvision_resnet50()
+        elif args.backbone == 'resnet101':
+            model = torchvision_resnet101()
+        elif args.backbone == 'ViT-B_16':
+            model = VisionTransformer(image_size=224, patch_size=16, num_layers=10,
+                hidden_dim=256 , num_heads=4, mlp_dim=128
+            )
+        elif args.backbone == 'ViT-B_32':
+            model = VisionTransformer()
         
     if args.dataset == 'cifar10':
         model.fc = torch.nn.Linear(512, 10)
@@ -169,8 +182,8 @@ def test_supervised(trainDataset, testDataset, args):
 
 def main(args):
     # Create save folder
-    # the experiment save path: ./${output_dir}/${dataset}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
-    args.output_dir = os.path.join(args.output_dir, args.dataset)
+    # the experiment save path: ./${output_dir}/${dataset}/${model}/${natural/poisoned}/${pretrained/scratch}${poisoned_source}
+    args.output_dir = os.path.join(args.output_dir, args.dataset, args.backbone)
 
     if args.poisoned:
         args.output_dir = os.path.join(args.output_dir, "poisoned")
@@ -179,8 +192,13 @@ def main(args):
         else:
             args.output_dir = os.path.join(args.output_dir, "scratched")
         noise_path = args.noise_path
-        noise_clip_version = noise_path.split('/')[-4]  # get noise training source
+        # eg: ./output/unlearn_stage2_generate_noise/ViT-B_16/stl10/classWise/noise_gen1_ViT-B-16_stl10_all.pt
+        noise_clip_version = noise_path.split('/')[-4]  # get noise training source clip model
         noise_type_version = noise_path.split('/')[-2]  # get noise type version (sample/class)
+        noise_of_dataset = noise_path.split('/')[-3]  # get noise of dataset
+        if noise_of_dataset != args.finetune_dataset:
+            print(f"Warning: The noise_of_dataset({noise_of_dataset}) is not equal to dataset ({args.dataset})")
+            exit(0)
         args.noise_clip_version = noise_clip_version
         args.noise_type_version = noise_type_version
         args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
@@ -192,37 +210,13 @@ def main(args):
         else:
             args.output_dir = os.path.join(args.output_dir, "scratched")
     create_folder(args.output_dir)
-    
-    train_transform = To32TensorTrans
-    test_transform = To32TensorTrans
-    
-    import torchvision
-    train_transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(size=(96, 96)),
-        torchvision.transforms.RandomCrop(size=(64, 64)),
-        torchvision.transforms.RandomHorizontalFlip(),
-        torchvision.transforms.RandomRotation(degrees=(-10, 10)),
-        torchvision.transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
-        torchvision.transforms.ColorJitter(brightness=0.3, hue=0.1),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                        std=[0.229, 0.224, 0.225])
-    ])
-
-    test_transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(size=(96, 96)),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                        std=[0.229, 0.224, 0.225])
-    ])
         
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=transform_supervised_train, test_transform=transform_supervised_test)
         train_dataset = poison_train_dataset
     else:
-        # poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
-        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
+        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=transform_supervised_train, test_transform=transform_supervised_test)
         train_dataset = natural_train_dataset
     
     result = test_supervised(train_dataset, test_dataset, args)
@@ -239,22 +233,20 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/stage1_train_g_unlearn/all/classWise/noise_gen1_ViT-B-32_stl10_all.pt')
-    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised_temp/')
-    
+    parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
+    
     # For train  
     parser.add_argument('--max_epoch', default=100, type=int)
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
-    parser.add_argument('--backbone', default='resnet18', choices=['resnet18', 'resnet50', 'resnet101'])
+    parser.add_argument('--backbone', default='ViT-B_16', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
     
     # for model(pretrained or not)
-    parser.add_argument('--pretrained', action='store_true')
-    
+    parser.add_argument('--pretrained', default=False, type=bool)
     parser.add_argument('--test_train_type', default='supervised')
-    
-    parser.add_argument('--finetune_dataset', default='mylaion', choices=['laion', 'cifar10', 'stl10'])
+    parser.add_argument('--finetune_dataset', default='coco', choices=['laion', 'cifar10', 'stl10', 'coco'])
     args = parser.parse_args()
 
     main(args)
