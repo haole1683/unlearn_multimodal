@@ -171,6 +171,10 @@ def test_supervised(trainDataset, testDataset, args):
         # record result
         myRecord.add_one_record(epoch, acc_meter_train, loss_meter_train, acc_meter_test ,loss_meter_test, class_correct_dict)
         
+        if args.save_model and epoch % 50 == 0:
+            model_save_path = os.path.join(args.output_dir, f"model_epoch{epoch}.pth")
+            torch.save(model.state_dict(), model_save_path)
+        
         tqdm.write('Clean Accuracy %.2f' % (acc_meter_test.avg*100))
         tqdm.write('Class Accuracy: ')
         for k,v in class_correct_dict.items():
@@ -199,7 +203,7 @@ def main(args):
         noise_clip_version = noise_path.split('/')[-4]  # get noise training source clip model
         noise_type_version = noise_path.split('/')[-2]  # get noise type version (sample/class)
         noise_of_dataset = noise_path.split('/')[-3]  # get noise of dataset
-        if noise_of_dataset != args.finetune_dataset:
+        if noise_of_dataset != args.dataset:
             print(f"Warning: The noise_of_dataset({noise_of_dataset}) is not equal to dataset ({args.dataset})")
             exit(0)
         args.noise_clip_version = noise_clip_version
@@ -242,7 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/stage1_train_g_unlearn/all/classWise/noise_gen1_ViT-B-32_stl10_all.pt')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/ViT-B-32/cifar10/classWise/noise_gen1_ViT-B-32_cifar10_all.pt')
     parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     
@@ -254,9 +258,11 @@ if __name__ == '__main__':
     parser.add_argument('--backbone', default='ViT-B_32', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
     
     # for model(pretrained or not)
-    parser.add_argument('--pretrained', default=True, type=bool)
+    parser.add_argument('--pretrained', default=False, type=bool)
     parser.add_argument('--test_train_type', default='supervised')
     parser.add_argument('--finetune_dataset', default='coco', choices=['laion', 'cifar10', 'stl10', 'coco'])
+    
+    parser.add_argument('--save_model', default=False, type=bool)
     args = parser.parse_args()
 
     main(args)
