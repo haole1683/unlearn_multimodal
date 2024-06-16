@@ -628,7 +628,25 @@ To32TensorTrans = transforms.Compose([
     transforms.ToTensor()
 ])
 
-transform_supervised_train = transforms.Compose([
+transform_supervised_train_224 = transforms.Compose([
+    transforms.Resize(size=(256, 256)),
+    transforms.RandomCrop(size=(224, 224)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(degrees=(-10, 10)),
+    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 0.5)),
+    transforms.ColorJitter(brightness=0.3, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225]),
+    ])
+transform_supervised_test_224 = transforms.Compose([
+    transforms.Resize(size=(224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                    std=[0.229, 0.224, 0.225])
+    ])
+
+transform_supervised_train_64 = transforms.Compose([
     transforms.Resize(size=(96, 96)),
     transforms.RandomCrop(size=(64, 64)),
     transforms.RandomHorizontalFlip(),
@@ -639,7 +657,7 @@ transform_supervised_train = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], 
                                     std=[0.229, 0.224, 0.225]),
     ])
-transform_supervised_test = transforms.Compose([
+transform_supervised_test_96 = transforms.Compose([
     transforms.Resize(size=(96, 96)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], 

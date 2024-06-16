@@ -89,8 +89,9 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
         # TODO Test reverse image
         
         if args.img_transform == 'kornia':
-            imgs_augmentations = augmentations_kornia(imgs)
-            imgs = imgs_augmentations
+            imgs_augmentations_1 = augmentations_kornia(imgs)
+            imgs_augmentations_2 = augmentations_kornia(imgs)
+            imgs = imgs_augmentations_1
         
         text = tokenizer(batch[1], truncate=True)
         text = text.to(accelerator.device)
@@ -111,6 +112,8 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             
             image_clean = clip_normalize(imgs)
             images_adv = clip_normalize(images_adv)
+            imgs_augmentations_1 = clip_normalize(imgs_augmentations_1)
+            imgs_augmentations_2 = clip_normalize(imgs_augmentations_2)
             
             img_embeddings_clean = clip_model.encode_image(image_clean)
             img_embeddings_unlearn = clip_model.encode_image(images_adv)
@@ -128,12 +131,17 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             loss_contrastive_img_text = (loss_image(logits_per_image, ground_truth) + loss_text(logits_per_caption, ground_truth)) / 2
             
             # Method3 to calculate loss (image, image_aug)
-            img_aug_embeddings = clip_model.encode_image(images_adv)
-            loss_contrastive_img_aug = infoNCE_loss(img_embeddings_clean, img_aug_embeddings)
+            # img_aug_embeddings = clip_model.encode_image(images_adv)
+            # loss_contrastive_img_aug = infoNCE_loss(img_embeddings_clean, img_aug_embeddings)
+            
+            # Contrastive Loss
+            img_aug_1_embeddings = clip_model.encode_image(imgs_augmentations_1)
+            img_aug_2_embeddings = clip_model.encode_image(imgs_augmentations_2)
+            loss_contrastive_img_aug = infoNCE_loss(img_aug_1_embeddings, img_aug_2_embeddings)
             
             alpha, beta, gamma = 1, 1, 1
             # total_loss = loss_contrastive_imgs * alpha + loss_contrastive_unlearn_text * beta + loss_contrastive_img_text * gamma
-            total_loss = loss_contrastive_img_text * alpha 
+            total_loss = loss_contrastive_img_text * alpha + beta * loss_contrastive_img_aug
             # total_loss = loss_contrastive_img_text * alpha + loss_contrastive_img_aug
             # total_loss = loss_contrastive_img_text * alpha
             # total_loss = -loss_contrastive_unlearn_text * alpha
@@ -145,6 +153,7 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             loss_contrastive_img_text_gather = accelerator.gather(loss_contrastive_img_text).mean()
             loss_contrastive_imgs_gather = accelerator.gather(loss_contrastive_imgs).mean()
             loss_contrastive_unlearn_text_gather = accelerator.gather(loss_contrastive_unlearn_text).mean()
+            loss_contrastive_img_aug_gather = accelerator.gather(loss_contrastive_img_aug).mean()
             
             optimizerG.step()
             optimizerG.zero_grad()
@@ -163,7 +172,8 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
                 "loss": float(loss_total_gather.detach().cpu().numpy()),
                 "loss_contrastive_imgs":  float(loss_contrastive_img_text_gather.detach().cpu().numpy()),
                 "loss_contrastive_unlearn_text":  float(loss_contrastive_imgs_gather.detach().cpu().numpy()),
-                "loss_contrastive_img_text":  float(loss_contrastive_unlearn_text_gather.detach().cpu().numpy())
+                "loss_contrastive_img_text":  float(loss_contrastive_unlearn_text_gather.detach().cpu().numpy()),
+                "loss_contrastive_img_aug":  float(loss_contrastive_img_aug_gather.detach().cpu().numpy())
             }
             
             # loss_dict[model_key +"_lr"] = optimizerG.param_groups[0]['lr']
@@ -179,13 +189,15 @@ def train(epoch_idx, accelerator, train_dataloader, clip_models, generator, opti
             mean_loss_contrastive_images_across_model = np.mean([loss_dict[model_key]['loss_contrastive_imgs'] for model_key in loss_dict.keys()])
             mean_loss_contrastive_unlearn_text_across_model = np.mean([loss_dict[model_key]['loss_contrastive_unlearn_text'] for model_key in loss_dict.keys()])
             mean_loss_contrastive_img_text_across_model = np.mean([loss_dict[model_key]['loss_contrastive_img_text'] for model_key in loss_dict.keys()])
+            mean_loss_contrastive_img_aug_across_model = np.mean([loss_dict[model_key]['loss_contrastive_img_aug'] for model_key in loss_dict.keys()])
             
             loss_dict["mean_across_model"] = {
                 "mean_lr_across_model": mean_lr_across_model,
                 "mean_loss_across_model": mean_loss_across_model,
                 "mean_loss_contrastive_images_across_model": mean_loss_contrastive_images_across_model,
                 "mean_loss_contrastive_unlearn_text_across_model": mean_loss_contrastive_unlearn_text_across_model,
-                "mean_loss_contrastive_img_text_across_model": mean_loss_contrastive_img_text_across_model
+                "mean_loss_contrastive_img_text_across_model": mean_loss_contrastive_img_text_across_model,
+                "mean_loss_contrastive_img_aug_across_model": mean_loss_contrastive_img_aug_across_model
             }
             
             loss_list_dict[batch_idx] = loss_dict
@@ -394,7 +406,7 @@ def main(args):
                            os.path.join(args.output_dir, "checkpoint/generator_best_epoch-{}_loss-{}.pth").format(epoch_idx, the_mean_loss))
 
 if __name__ == '__main__':
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     parser = argparse.ArgumentParser()       
     parser.add_argument('--seed', default=42, type=int)
@@ -406,13 +418,13 @@ if __name__ == '__main__':
     parser.add_argument('--trainset', default='all', choices=['all', 'cat'])
 
     # poisoning
-    parser.add_argument('--clip_model', default='both', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both', 'both2'])
+    parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both', 'both2'])
     # parser.add_argument('--freeze_encoder', default='', help="image or text or none") # fi/ft = freeze image/text
 
     # transform for image
     parser.add_argument('--img_transform', default='kornia', choices=['None', 'kornia'])
 
-    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn')
+    parser.add_argument('--output_dir', default='./output/unlearn_stage1_train_g_unlearn_attempt_add_cLoss')
     parser.add_argument('--overwrite', action='store_true')
     
     args = parser.parse_args()

@@ -3,7 +3,8 @@ from models.ResNet import ResNet18
 from utils.data_utils import (
     load_poison_dataset, load_class_dataset,
     To32TensorTrans, To244TensorTrans,
-    transform_supervised_train,transform_supervised_test,
+    transform_supervised_train_64, transform_supervised_test_96,
+    transform_supervised_train_224, transform_supervised_test_224
 )
 from utils.noise_utils import (
     limit_noise
@@ -24,10 +25,12 @@ from torchvision.models import (
     resnet50 as torchvision_resnet50,
     resnet101 as torchvision_resnet101,
     ResNet18_Weights, ResNet50_Weights, ResNet101_Weights,
-    VisionTransformer,
+    VisionTransformer,vit_b_16,
     ViT_B_16_Weights, ViT_B_32_Weights, ViT_L_16_Weights, ViT_L_32_Weights
 )
-from torchvision import transforms
+from torchvision.models import (
+    vit_b_16, vit_b_32, vit_l_16, vit_l_32
+)
 from torch.utils.data import (DataLoader)
 import torch
 
@@ -61,10 +64,10 @@ def test_supervised(trainDataset, testDataset, args):
             model = torchvision_resnet101(weights=ResNet101_Weights.IMAGENET1K_V1)
         elif args.backbone == 'ViT-B_16':
             print("Using pretrained model - ViT-B_16 - IMAGENET2")
-            model = VisionTransformer(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+            model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
         elif args.backbone == 'ViT-B_32':
             print("Using pretrained model - ViT-B_32 - IMAGENET2")
-            model = VisionTransformer(weights=ViT_B_32_Weights.IMAGENET1K_V1)
+            model = vit_b_32(weights=ViT_B_32_Weights.IMAGENET1K_V1)
     else:   # use scratch model
         if args.backbone == 'resnet18':
             model = torchvision_resnet18()
@@ -73,18 +76,18 @@ def test_supervised(trainDataset, testDataset, args):
         elif args.backbone == 'resnet101':
             model = torchvision_resnet101()
         elif args.backbone == 'ViT-B_16':
-            model = VisionTransformer(image_size=224, patch_size=16, num_layers=10,
-                hidden_dim=256 , num_heads=4, mlp_dim=128
-            )
+            model = vit_b_16()
         elif args.backbone == 'ViT-B_32':
-            model = VisionTransformer()
-        
-    if args.dataset == 'cifar10':
-        model.fc = torch.nn.Linear(512, 10)
-    elif args.dataset == 'stl10':
-        model.fc = torch.nn.Linear(512, 10)
-    elif args.dataset == 'cifar100':
-        model.fc = torch.nn.Linear(512, 100)
+            model = vit_b_32()
+    
+    if args.backbone.startswith('resnet'):
+        fc_in_dim = model.fc.in_features
+        if args.dataset == 'cifar10':
+            model.fc = torch.nn.Linear(fc_in_dim, 10)
+        elif args.dataset == 'stl10':
+            model.fc = torch.nn.Linear(fc_in_dim, 10)
+        elif args.dataset == 'cifar100':
+            model.fc = torch.nn.Linear(fc_in_dim, 100)
     
     model = model.to(device)
     criterion = torch.nn.CrossEntropyLoss()
@@ -210,13 +213,20 @@ def main(args):
         else:
             args.output_dir = os.path.join(args.output_dir, "scratched")
     create_folder(args.output_dir)
+    
+    if args.backbone.startswith('resnet'):
+        train_transform =  transform_supervised_train_64
+        test_transform = transform_supervised_test_96
+    elif args.backbone.startswith('ViT'):
+        train_transform = transform_supervised_train_224
+        test_transform = transform_supervised_test_224
         
     if args.poisoned:
         noise = torch.load(args.noise_path, map_location=args.device)
-        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=transform_supervised_train, test_transform=transform_supervised_test)
+        poison_train_dataset, test_dataset = load_poison_dataset(args.dataset, noise, target_poison_class_name=args.poison_class_name, train_transform=train_transform, test_transform=test_transform)
         train_dataset = poison_train_dataset
     else:
-        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=transform_supervised_train, test_transform=transform_supervised_test)
+        natural_train_dataset, test_dataset = load_class_dataset(args.dataset, train_transform=train_transform, test_transform=test_transform)
         train_dataset = natural_train_dataset
     
     result = test_supervised(train_dataset, test_dataset, args)
@@ -229,7 +239,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
     parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/stage1_train_g_unlearn/all/classWise/noise_gen1_ViT-B-32_stl10_all.pt')
@@ -241,10 +251,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
-    parser.add_argument('--backbone', default='ViT-B_16', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
+    parser.add_argument('--backbone', default='ViT-B_32', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
     
     # for model(pretrained or not)
-    parser.add_argument('--pretrained', default=False, type=bool)
+    parser.add_argument('--pretrained', default=True, type=bool)
     parser.add_argument('--test_train_type', default='supervised')
     parser.add_argument('--finetune_dataset', default='coco', choices=['laion', 'cifar10', 'stl10', 'coco'])
     args = parser.parse_args()
