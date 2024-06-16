@@ -70,14 +70,19 @@ def test_supervised(trainDataset, testDataset, args):
             model = vit_b_32(weights=ViT_B_32_Weights.IMAGENET1K_V1)
     else:   # use scratch model
         if args.backbone == 'resnet18':
+            print("Using scratch model - ResNet18")
             model = torchvision_resnet18()
         elif args.backbone == 'resnet50':
+            print("Using scratch model - ResNet50")
             model = torchvision_resnet50()
         elif args.backbone == 'resnet101':
+            print("Using scratch model - ResNet101")
             model = torchvision_resnet101()
         elif args.backbone == 'ViT-B_16':
+            print("Using scratch model - ViT-B_16")
             model = vit_b_16()
         elif args.backbone == 'ViT-B_32':
+            print("Using scratch model - ViT-B_32")
             model = vit_b_32()
     
     if args.backbone.startswith('resnet'):
@@ -251,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     
     # For train  
-    parser.add_argument('--max_epoch', default=100, type=int)
+    parser.add_argument('--max_epoch', default=101, type=int)
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
