@@ -255,18 +255,31 @@ def main(args):
     generator_path = args.generator_path
     args.generator_clip_version = args.generator_path.split('/')[-3][8:]
     
-    if args.generator_clip_version != args.clip_model.replace('/','_'):
+    if args.clip_model != "auto" and args.generator_clip_version != args.clip_model.replace('/','_'):
         print(f"!!!!!!!!!!! Generator clip version {args.generator_clip_version} is not equal to args.clip_model {args.clip_model}!!!!!!!!!!!!")
-    clip_model_str = "-encoder-" + args.clip_model.replace('/','-')
     if args.generator_clip_version == 'both':
+        clip_model_str = "-encoder-" + args.clip_model.replace('/','-')
         args.output_dir = os.path.join(args.output_dir, args.generator_clip_version + clip_model_str)
-    else:
-        args.output_dir = os.path.join(args.output_dir , args.generator_clip_version)
+    elif args.clip_model == 'auto':
+        path = args.generator_path
+        if 'RN50' in path:
+            args.clip_model = 'RN50'
+        elif 'RN101' in path:
+            args.clip_model = 'RN101'
+        elif 'RN50x4' in path:
+            args.clip_model = 'RN50x4'
+        elif 'ViT-B-32' in path:
+            args.clip_model = 'ViT-B/32'
+        elif 'ViT-B-16' in path:
+            args.clip_model = 'ViT-B/16'
+        else:
+            raise ValueError("Invalid clip model")
+        args.output_dir = os.path.join(args.output_dir , args.clip_model.replace('/','-'))
     
     args.output_dir = os.path.join(args.output_dir, args.dataset)
     
     if args.noise_type == 'sampleWise':
-        args.update_z_freq = 1
+        args.update_z_freq = 1e15
         args.text_prompt_stragegy = 'poll'
         args.output_dir = os.path.join(args.output_dir, 'sampleWise')
     elif args.noise_type == 'classWise':
@@ -285,15 +298,15 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda:1')
-    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-340_loss-0.08368754915054484.pth")
+    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-500_loss-0.058220808281365666.pth")
     parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise_temp1/")
     
-    parser.add_argument('--clip_model', default='ViT-B/32', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both'])
+    parser.add_argument('--clip_model', default='auto', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both', 'auto'])
     parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10', 'cifar100'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--gen_which', default='all', choices=['gen1', 'gen2', 'all'])
+    parser.add_argument('--gen_which', default='gen1', choices=['gen1', 'gen2', 'all'])
     # generate noise hyper parameter
     # Here, z freq means the frequency of updating z (generator latent input)
     # if 1 , then every batch update z_input

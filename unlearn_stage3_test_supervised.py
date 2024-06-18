@@ -44,10 +44,13 @@ torch.backends.cudnn.benchmark = True
 
 
 def test_supervised(trainDataset, testDataset, args):
-    train_loader = DataLoader(dataset=trainDataset, batch_size=512,
+    if args.backbone == 'ViT-B_16':
+        args.batch_size = args.batch_size // 4  # 512 CUDA out of memory
+    print(f"Batch Size: {args.batch_size}")
+    train_loader = DataLoader(dataset=trainDataset, batch_size=args.batch_size,
                                     shuffle=True, pin_memory=True,
                                     drop_last=False, num_workers=12)
-    test_loader = DataLoader(dataset=testDataset, batch_size=512,
+    test_loader = DataLoader(dataset=testDataset, batch_size=args.batch_size,
                                     shuffle=False, pin_memory=True,
                                     drop_last=False, num_workers=12)
     device = args.device
@@ -213,15 +216,19 @@ def main(args):
             exit(0)
         args.noise_clip_version = noise_clip_version
         args.noise_type_version = noise_type_version
-        args.output_dir = os.path.join(args.output_dir, f"noise_of_{args.finetune_dataset}_{noise_clip_version}")
+        args.output_dir = os.path.join(args.output_dir, f"noise_of_{noise_clip_version}")
         args.output_dir = os.path.join(args.output_dir, noise_type_version)
     else:
         args.output_dir = os.path.join(args.output_dir, "natural")
+        print(args.pretrained)
         if args.pretrained:
+            print("!11")
             args.output_dir = os.path.join(args.output_dir, "pretrained")
         else:
+            print("!22")
             args.output_dir = os.path.join(args.output_dir, "scratched")
     create_folder(args.output_dir)
+    print('create folder in ', args.output_dir)
     
     if args.backbone.startswith('resnet'):
         train_transform =  transform_supervised_train_64
@@ -251,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--dataset', default='stl10', choices=['cifar10', 'stl10', 'cifar100'])
     parser.add_argument('--poisoned', action='store_true')
-    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/ViT-B-32/cifar10/classWise/noise_gen1_ViT-B-32_cifar10_all.pt')
+    parser.add_argument('--noise_path', default= './output/unlearn_stage2_generate_noise_temp1/ViT-B-32(500E)/stl10/classWise/noise_gen1_ViT-B-32_stl10_all.pt')
     parser.add_argument('--output_dir', default='./output/unlearn_stage3_test_supervised/')
     parser.add_argument('--poison_class_name', default='all', choices=['all', 'airplane', 'bird', 'car', 'cat', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck'])
     
@@ -260,10 +267,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.1, type=float)
     parser.add_argument('--transform', default='default', choices=['default', 'supervised'])
     parser.add_argument('--batch_size', default=512, type=int)
-    parser.add_argument('--backbone', default='ViT-B_32', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
+    parser.add_argument('--backbone', default='ViT-B_16', choices=['resnet18', 'resnet50', 'resnet101', 'ViT-B_16', 'ViT-B_32'])
     
     # for model(pretrained or not)
-    parser.add_argument('--pretrained', default=False, type=bool)
+    parser.add_argument('--pretrained', action='store_true')
     parser.add_argument('--test_train_type', default='supervised')
     parser.add_argument('--finetune_dataset', default='coco', choices=['laion', 'cifar10', 'stl10', 'coco'])
     
