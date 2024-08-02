@@ -4,15 +4,23 @@ PREFIX_PATH="./output/unlearn_stage2_generate_noise_temp1"
 
 # 定义backbone列表  
 BACKBONES=("resnet18" "resnet50" "resnet101" "ViT-B_16" "ViT-B_32")  
+# BACKBONES=("ViT-B_16") 
+# BACKBONES=("ViT-B_32")  
   
 # 定义dataset列表  
 DATASETS=("cifar10" "cifar100" "stl10")  
 
 # 是否为预训练模型
-PRETRAIN=("True" "False")
+# PRETRAIN=("True" "False")
+PRETRAIN=("True")
 
 # Generator版本
 # G_CLIP_VERSION=('RN50'  'RN101' 'RN50x4' 'ViT-B-32' 'ViT-B-16')
+# G_CLIP_VERSION=('ViT-B-16' 'ViT-B-32' 'RN50'  'RN101' 'RN50x4')
+# G_CLIP_VERSION=('RN50')
+# G_CLIP_VERSION=('RN101')
+# G_CLIP_VERSION=('RN50x4')
+# G_CLIP_VERSION=('ViT-B-16')
 G_CLIP_VERSION=('ViT-B-32')
 
 # Noise Type
@@ -30,8 +38,10 @@ for BACKBONE in "${BACKBONES[@]}"; do
                     echo "Running poisoned experiment with backbone: $BACKBONE and dataset: $DATASET and pretrain: $PRETRAIN and G_CLIP: $G_CLIP and NOISE_PATH: $the_noise_path"  
                     # 调用Python脚本并传递参数  
                     if [ "$PRETRAIN" == "True" ]; then
+                        echo "Pretrain"
                         python unlearn_stage3_test_supervised.py --backbone "$BACKBONE" --dataset "$DATASET" --poisoned --noise_path "$the_noise_path" --pretrain
                     else
+                        echo "No Pretrain"
                         python unlearn_stage3_test_supervised.py --backbone "$BACKBONE" --dataset "$DATASET" --poisoned --noise_path "$the_noise_path" 
                     fi
                 done

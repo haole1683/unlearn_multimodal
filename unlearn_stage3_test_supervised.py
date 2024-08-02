@@ -208,9 +208,16 @@ def main(args):
             args.output_dir = os.path.join(args.output_dir, "scratched")
         noise_path = args.noise_path
         # eg: ./output/unlearn_stage2_generate_noise/ViT-B_16/stl10/classWise/noise_gen1_ViT-B-16_stl10_all.pt
-        noise_clip_version = noise_path.split('/')[-4]  # get noise training source clip model
-        noise_type_version = noise_path.split('/')[-2]  # get noise type version (sample/class)
-        noise_of_dataset = noise_path.split('/')[-3]  # get noise of dataset
+        # eg: ./output/unlearn_stage2_generate_noise_acc_with_epoch/ViT-B-32/epoch-460/cifar10/classWise/noise_gen1_ViT-B-32_cifar10_all.pt
+        if args.record_epoch == 'F':
+            noise_clip_version = noise_path.split('/')[-4]  # get noise training source clip model
+            noise_type_version = noise_path.split('/')[-2]  # get noise type version (sample/class)
+            noise_of_dataset = noise_path.split('/')[-3]  # get noise of dataset
+        else:
+            noise_clip_version = noise_path.split('/')[-5]
+            noise_type_version = noise_path.split('/')[-2]
+            noise_of_dataset = noise_path.split('/')[-3]
+            noise_of_epoch = noise_path.split('/')[-4]
         if noise_of_dataset != args.dataset:
             print(f"Warning: The noise_of_dataset({noise_of_dataset}) is not equal to dataset ({args.dataset})")
             exit(0)
@@ -218,6 +225,8 @@ def main(args):
         args.noise_type_version = noise_type_version
         args.output_dir = os.path.join(args.output_dir, f"noise_of_{noise_clip_version}")
         args.output_dir = os.path.join(args.output_dir, noise_type_version)
+        if args.record_epoch != 'F':
+            args.output_dir = os.path.join(args.output_dir, noise_of_epoch)
     else:
         args.output_dir = os.path.join(args.output_dir, "natural")
         print(args.pretrained)
@@ -275,6 +284,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_dataset', default='coco', choices=['laion', 'cifar10', 'stl10', 'coco'])
     
     parser.add_argument('--save_model', default=False, type=bool)
+    parser.add_argument('--record_epoch', default='F', type=str)
     args = parser.parse_args()
 
     main(args)

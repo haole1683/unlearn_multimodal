@@ -276,6 +276,19 @@ def main(args):
             raise ValueError("Invalid clip model")
         args.output_dir = os.path.join(args.output_dir , args.clip_model.replace('/','-'))
     
+    if args.record_epoch == 'T':
+        import re
+        model_path = args.generator_path
+        epoch_data = re.search(r'epoch-(\d+)_', model_path)
+
+        if epoch_data:
+            epoch = epoch_data.group(1)
+            print(f'Epoch: {epoch}')
+        else:
+            raise ValueError("Error For", args.generator_path)
+        source_model_epoch = "epoch-" + str(epoch)
+        args.output_dir = os.path.join(args.output_dir, source_model_epoch)
+    
     args.output_dir = os.path.join(args.output_dir, args.dataset)
     
     if args.noise_type == 'sampleWise':
@@ -318,6 +331,7 @@ if __name__ == '__main__':
     # if noise_type is specific, the update_z_freq and text_prompt_stragegy is self-defined
     parser.add_argument('--noise_type', default='classWise', choices=['sampleWise', 'classWise', 'specific'])
     parser.add_argument('--noise_shape', default=(3,224,224), type=tuple)
+    parser.add_argument('--record_epoch', default='F')
     
     args = parser.parse_args()
 

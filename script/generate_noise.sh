@@ -1,7 +1,13 @@
 #!/bin/bash  
 
-# "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-200_loss-0.15745621855124767.pth",
-GPATH=("./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-500_loss-0.058220808281365666.pth")
+
+# "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-500_loss-0.058220808281365666.pth"
+GPATH=(
+    # "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/generator_best_epoch-200_loss-0.15745621855124767.pth"
+    # "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-16/checkpoint/generator_best_epoch-200_loss-0.2129581318079651.pth" 
+    # "./output/unlearn_stage1_train_g_unlearn/gen-coco-RN101/checkpoint/generator_best_epoch-200_loss-0.7492828443323895.pth" 
+    # "./output/unlearn_stage1_train_g_unlearn/gen-coco-RN50/checkpoint/generator_best_epoch-200_loss-0.7810426801120564.pth"
+)
 TYPES=("sampleWise" "classWise")
 DATASETS=("cifar10" "cifar100" "stl10")  
 
