@@ -302,7 +302,7 @@ if __name__ == '__main__':
     
     # training
     parser.add_argument('--batch_size', default=256, type=int)
-    parser.add_argument('--lr', default=1e-5, type=float)
+    parser.add_argument('--lr', default=5e-4, type=float)
 
     # poisoning
     parser.add_argument('--clip_model', default='RN50', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])

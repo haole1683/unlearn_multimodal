@@ -163,7 +163,6 @@ def main(args=None):
     #### Dataset #### 
     # experiment 1
     if finetune_dataset == "myLaion":
-        json_path = "./data/laion-truck.json"
         json_all_path = "./data/laion-all-with-index.json"
         
         noise_path = args.noise_path
@@ -239,7 +238,7 @@ def main(args=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--checkpoint', default='')   
-    parser.add_argument('--device', default='cuda:1')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -249,7 +248,7 @@ if __name__ == '__main__':
     
     # training
     parser.add_argument('--batch_size', default=1024, type=int)
-    parser.add_argument('--lr', default=1e-5, type=float)
+    parser.add_argument('--lr', default=5e-1, type=float)
     parser.add_argument('--max_epoch', default=105, type=int)
 
     # poisoning
@@ -263,7 +262,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default="./outputNew/unlearn_stage3_test_clip_finetune_adapter/")
     
     # noise
-    parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise_temp1/stage1_train_g_unlearn/all/classWise/noise_gen2_46221-224-224_all_ViT-B-32.pt")
+    parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise_temp1/ViT-B-32/all/classWise/noise_gen2_46221-224-224_all_ViT-B-32.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()
     
@@ -282,6 +281,8 @@ if __name__ == '__main__':
     clip_model_str = args.clip_model.replace('/','_')
     args.output_dir = os.path.join(args.output_dir, f"{args.finetune_dataset}_{clip_model_str}")
 
+    print("--------")
+    print("The path is located ", args.output_dir)
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     main(args)

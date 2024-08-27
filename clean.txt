@@ -1,0 +1,232 @@
+Parameters to be updated: {'transformer.resblocks.7.ln_1.weight', 'visual.transformer.resblocks.1.attn.in_proj_weight', 'visual.transformer.resblocks.1.mlp.c_fc.bias', 'visual.transformer.resblocks.8.attn.in_proj_weight', 'transformer.resblocks.8.ln_1.bias', 'visual.transformer.resblocks.7.attn.out_proj.weight', 'transformer.resblocks.4.mlp.c_proj.weight', 'transformer.resblocks.10.ln_1.bias', 'visual.transformer.resblocks.3.ln_1.weight', 'transformer.resblocks.9.mlp.c_fc.weight', 'transformer.resblocks.9.ln_1.weight', 'transformer.resblocks.2.ln_2.bias', 'transformer.resblocks.2.ln_2.weight', 'transformer.resblocks.5.mlp.c_fc.weight', 'transformer.resblocks.6.mlp.c_fc.weight', 'visual.transformer.resblocks.1.ln_2.weight', 'transformer.resblocks.5.ln_1.weight', 'visual.transformer.resblocks.8.ln_1.weight', 'visual.transformer.resblocks.3.mlp.c_proj.bias', 'transformer.resblocks.6.ln_2.weight', 'transformer.resblocks.8.ln_2.bias', 'transformer.resblocks.3.mlp.c_proj.weight', 'ln_final.weight', 'visual.transformer.resblocks.1.attn.out_proj.bias', 'visual.transformer.resblocks.10.attn.in_proj_weight', 'transformer.resblocks.1.ln_1.weight', 'transformer.resblocks.1.mlp.c_fc.bias', 'transformer.resblocks.2.attn.out_proj.weight', 'transformer.resblocks.3.ln_1.bias', 'transformer.resblocks.6.attn.out_proj.weight', 'transformer.resblocks.9.ln_2.bias', 'visual.transformer.resblocks.1.mlp.c_proj.bias', 'transformer.resblocks.3.attn.in_proj_bias', 'visual.transformer.resblocks.8.mlp.c_proj.bias', 'transformer.resblocks.7.mlp.c_proj.weight', 'visual.transformer.resblocks.10.attn.in_proj_bias', 'transformer.resblocks.8.attn.in_proj_bias', 'transformer.resblocks.9.mlp.c_proj.bias', 'visual.proj', 'transformer.resblocks.6.attn.out_proj.bias', 'transformer.resblocks.8.ln_2.weight', 'visual.transformer.resblocks.2.attn.out_proj.weight', 'visual.transformer.resblocks.2.ln_1.bias', 'transformer.resblocks.1.ln_2.bias', 'transformer.resblocks.10.mlp.c_fc.bias', 'transformer.resblocks.6.ln_1.weight', 'visual.transformer.resblocks.7.mlp.c_fc.weight', 'transformer.resblocks.4.attn.in_proj_weight', 'transformer.resblocks.7.ln_2.bias', 'transformer.resblocks.0.ln_2.bias', 'visual.transformer.resblocks.10.ln_1.bias', 'visual.transformer.resblocks.4.mlp.c_fc.weight', 'transformer.resblocks.3.attn.in_proj_weight', 'visual.transformer.resblocks.1.mlp.c_fc.weight', 'visual.transformer.resblocks.2.mlp.c_proj.weight', 'visual.transformer.resblocks.1.mlp.c_proj.weight', 'visual.transformer.resblocks.7.attn.out_proj.bias', 'transformer.resblocks.1.ln_1.bias', 'visual.transformer.resblocks.11.ln_1.weight', 'transformer.resblocks.9.attn.in_proj_weight', 'transformer.resblocks.7.ln_2.weight', 'token_embedding.weight', 'visual.transformer.resblocks.0.attn.in_proj_weight', 'visual.transformer.resblocks.8.attn.out_proj.weight', 'transformer.resblocks.7.ln_1.bias', 'visual.transformer.resblocks.3.ln_2.bias', 'transformer.resblocks.7.mlp.c_proj.bias', 'transformer.resblocks.2.mlp.c_proj.weight', 'visual.transformer.resblocks.0.attn.out_proj.bias', 'visual.transformer.resblocks.8.mlp.c_fc.bias', 'transformer.resblocks.0.mlp.c_fc.bias', 'transformer.resblocks.4.mlp.c_fc.weight', 'transformer.resblocks.11.ln_2.weight', 'transformer.resblocks.5.attn.in_proj_bias', 'transformer.resblocks.11.mlp.c_proj.bias', 'visual.transformer.resblocks.5.attn.out_proj.weight', 'visual.transformer.resblocks.0.mlp.c_fc.bias', 'visual.transformer.resblocks.7.ln_1.weight', 'visual.transformer.resblocks.8.ln_1.bias', 'visual.transformer.resblocks.5.mlp.c_fc.weight', 'transformer.resblocks.11.attn.in_proj_bias', 'visual.transformer.resblocks.9.ln_1.weight', 'transformer.resblocks.10.ln_1.weight', 'visual.transformer.resblocks.9.attn.out_proj.bias', 'visual.transformer.resblocks.6.attn.out_proj.weight', 'transformer.resblocks.4.ln_2.bias', 'transformer.resblocks.9.mlp.c_fc.bias', 'transformer.resblocks.7.attn.in_proj_bias', 'visual.transformer.resblocks.11.mlp.c_fc.weight', 'transformer.resblocks.2.mlp.c_fc.weight', 'visual.transformer.resblocks.2.attn.in_proj_bias', 'transformer.resblocks.11.attn.out_proj.bias', 'visual.ln_post.weight', 'visual.transformer.resblocks.9.attn.in_proj_bias', 'transformer.resblocks.10.attn.in_proj_weight', 'transformer.resblocks.10.attn.out_proj.bias', 'visual.transformer.resblocks.1.ln_1.bias', 'transformer.resblocks.3.ln_2.weight', 'transformer.resblocks.0.attn.out_proj.weight', 'visual.transformer.resblocks.8.attn.out_proj.bias', 'transformer.resblocks.6.attn.in_proj_weight', 'transformer.resblocks.9.attn.out_proj.bias', 'visual.transformer.resblocks.0.ln_2.weight', 'transformer.resblocks.7.mlp.c_fc.bias', 'transformer.resblocks.9.attn.in_proj_bias', 'visual.transformer.resblocks.0.attn.in_proj_bias', 'transformer.resblocks.2.attn.out_proj.bias', 'visual.transformer.resblocks.10.ln_1.weight', 'transformer.resblocks.7.attn.in_proj_weight', 'transformer.resblocks.9.ln_2.weight', 'visual.transformer.resblocks.11.attn.in_proj_bias', 'visual.transformer.resblocks.3.attn.in_proj_weight', 'visual.transformer.resblocks.4.attn.in_proj_bias', 'transformer.resblocks.6.attn.in_proj_bias', 'visual.transformer.resblocks.8.mlp.c_fc.weight', 'transformer.resblocks.11.ln_2.bias', 'visual.transformer.resblocks.5.mlp.c_proj.weight', 'transformer.resblocks.1.mlp.c_proj.bias', 'visual.class_embedding', 'visual.transformer.resblocks.2.attn.in_proj_weight', 'visual.transformer.resblocks.2.mlp.c_proj.bias', 'visual.ln_post.bias', 'visual.transformer.resblocks.6.mlp.c_proj.weight', 'transformer.resblocks.5.ln_2.weight', 'visual.transformer.resblocks.9.attn.out_proj.weight', 'visual.transformer.resblocks.5.mlp.c_fc.bias', 'logit_scale', 'transformer.resblocks.2.ln_1.weight', 'transformer.resblocks.3.attn.out_proj.bias', 'transformer.resblocks.6.mlp.c_proj.bias', 'visual.transformer.resblocks.4.attn.out_proj.weight', 'transformer.resblocks.5.ln_2.bias', 'visual.transformer.resblocks.2.ln_1.weight', 'visual.transformer.resblocks.7.mlp.c_fc.bias', 'transformer.resblocks.1.mlp.c_proj.weight', 'transformer.resblocks.5.mlp.c_proj.weight', 'visual.transformer.resblocks.9.ln_1.bias', 'transformer.resblocks.6.ln_2.bias', 'visual.transformer.resblocks.8.mlp.c_proj.weight', 'visual.transformer.resblocks.10.attn.out_proj.bias', 'visual.transformer.resblocks.5.ln_2.weight', 'visual.transformer.resblocks.0.mlp.c_proj.weight', 'transformer.resblocks.11.mlp.c_fc.weight', 'transformer.resblocks.1.attn.in_proj_weight', 'transformer.resblocks.5.attn.in_proj_weight', 'transformer.resblocks.8.mlp.c_fc.weight', 'transformer.resblocks.7.mlp.c_fc.weight', 'visual.transformer.resblocks.4.ln_2.weight', 'visual.transformer.resblocks.7.ln_1.bias', 'transformer.resblocks.0.ln_2.weight', 'transformer.resblocks.10.attn.in_proj_bias', 'visual.transformer.resblocks.10.mlp.c_proj.weight', 'transformer.resblocks.3.ln_1.weight', 'transformer.resblocks.10.attn.out_proj.weight', 'visual.transformer.resblocks.0.ln_1.bias', 'visual.transformer.resblocks.9.ln_2.weight', 'transformer.resblocks.9.ln_1.bias', 'visual.transformer.resblocks.4.attn.out_proj.bias', 'visual.transformer.resblocks.3.mlp.c_fc.weight', 'visual.transformer.resblocks.0.mlp.c_fc.weight', 'transformer.resblocks.11.mlp.c_proj.weight', 'visual.transformer.resblocks.4.mlp.c_proj.bias', 'transformer.resblocks.4.ln_2.weight', 'transformer.resblocks.6.ln_1.bias', 'visual.transformer.resblocks.6.mlp.c_fc.bias', 'transformer.resblocks.8.ln_1.weight', 'visual.transformer.resblocks.9.mlp.c_fc.bias', 'visual.transformer.resblocks.11.attn.out_proj.weight', 'transformer.resblocks.1.attn.out_proj.weight', 'visual.transformer.resblocks.8.ln_2.bias', 'visual.transformer.resblocks.4.ln_1.weight', 'visual.transformer.resblocks.4.mlp.c_proj.weight', 'visual.transformer.resblocks.10.ln_2.bias', 'visual.transformer.resblocks.6.ln_1.bias', 'visual.transformer.resblocks.7.attn.in_proj_bias', 'visual.positional_embedding', 'visual.transformer.resblocks.9.ln_2.bias', 'transformer.resblocks.3.attn.out_proj.weight', 'visual.transformer.resblocks.6.ln_2.weight', 'transformer.resblocks.4.attn.in_proj_bias', 'transformer.resblocks.4.attn.out_proj.bias', 'transformer.resblocks.0.mlp.c_fc.weight', 'visual.transformer.resblocks.1.attn.out_proj.weight', 'visual.transformer.resblocks.4.ln_2.bias', 'visual.transformer.resblocks.6.attn.in_proj_bias', 'visual.transformer.resblocks.11.ln_2.bias', 'visual.transformer.resblocks.0.ln_2.bias', 'transformer.resblocks.4.mlp.c_proj.bias', 'transformer.resblocks.2.mlp.c_fc.bias', 'transformer.resblocks.11.ln_1.weight', 'transformer.resblocks.3.ln_2.bias', 'visual.transformer.resblocks.7.ln_2.bias', 'visual.transformer.resblocks.5.mlp.c_proj.bias', 'visual.transformer.resblocks.0.ln_1.weight', 'visual.transformer.resblocks.5.attn.in_proj_weight', 'transformer.resblocks.10.mlp.c_fc.weight', 'visual.transformer.resblocks.8.attn.in_proj_bias', 'visual.transformer.resblocks.5.ln_1.bias', 'transformer.resblocks.0.attn.out_proj.bias', 'visual.transformer.resblocks.9.mlp.c_proj.weight', 'transformer.resblocks.2.attn.in_proj_weight', 'transformer.resblocks.1.attn.out_proj.bias', 'visual.transformer.resblocks.2.mlp.c_fc.weight', 'transformer.resblocks.5.attn.out_proj.weight', 'transformer.resblocks.7.attn.out_proj.bias', 'visual.transformer.resblocks.2.mlp.c_fc.bias', 'visual.transformer.resblocks.6.mlp.c_fc.weight', 'visual.transformer.resblocks.6.attn.out_proj.bias', 'transformer.resblocks.5.mlp.c_proj.bias', 'ln_final.bias', 'visual.transformer.resblocks.1.ln_2.bias', 'visual.transformer.resblocks.11.attn.out_proj.bias', 'visual.ln_pre.weight', 'visual.transformer.resblocks.8.ln_2.weight', 'transformer.resblocks.8.attn.out_proj.bias', 'visual.transformer.resblocks.10.mlp.c_fc.weight', 'transformer.resblocks.0.ln_1.weight', 'visual.transformer.resblocks.2.ln_2.weight', 'transformer.resblocks.9.mlp.c_proj.weight', 'transformer.resblocks.11.ln_1.bias', 'transformer.resblocks.8.attn.in_proj_weight', 'transformer.resblocks.11.attn.in_proj_weight', 'transformer.resblocks.0.ln_1.bias', 'visual.transformer.resblocks.9.mlp.c_fc.weight', 'visual.transformer.resblocks.6.ln_1.weight', 'visual.transformer.resblocks.2.ln_2.bias', 'visual.transformer.resblocks.6.ln_2.bias', 'transformer.resblocks.5.attn.out_proj.bias', 'visual.transformer.resblocks.4.attn.in_proj_weight', 'visual.transformer.resblocks.5.ln_1.weight', 'transformer.resblocks.5.ln_1.bias', 'visual.transformer.resblocks.9.attn.in_proj_weight', 'visual.transformer.resblocks.10.mlp.c_proj.bias', 'visual.transformer.resblocks.1.ln_1.weight', 'visual.transformer.resblocks.10.mlp.c_fc.bias', 'transformer.resblocks.8.mlp.c_proj.bias', 'transformer.resblocks.8.mlp.c_proj.weight', 'transformer.resblocks.10.ln_2.bias', 'visual.transformer.resblocks.7.mlp.c_proj.bias', 'visual.transformer.resblocks.7.attn.in_proj_weight', 'visual.transformer.resblocks.6.mlp.c_proj.bias', 'text_projection', 'visual.transformer.resblocks.11.mlp.c_proj.weight', 'transformer.resblocks.9.attn.out_proj.weight', 'visual.transformer.resblocks.11.mlp.c_proj.bias', 'visual.transformer.resblocks.4.mlp.c_fc.bias', 'visual.transformer.resblocks.0.mlp.c_proj.bias', 'transformer.resblocks.4.ln_1.weight', 'transformer.resblocks.3.mlp.c_fc.weight', 'transformer.resblocks.8.mlp.c_fc.bias', 'visual.transformer.resblocks.3.ln_2.weight', 'transformer.resblocks.2.attn.in_proj_bias', 'transformer.resblocks.6.mlp.c_fc.bias', 'visual.transformer.resblocks.2.attn.out_proj.bias', 'visual.transformer.resblocks.11.attn.in_proj_weight', 'transformer.resblocks.1.mlp.c_fc.weight', 'visual.transformer.resblocks.11.ln_1.bias', 'visual.transformer.resblocks.7.ln_2.weight', 'visual.transformer.resblocks.5.attn.in_proj_bias', 'visual.ln_pre.bias', 'visual.transformer.resblocks.6.attn.in_proj_weight', 'visual.transformer.resblocks.7.mlp.c_proj.weight', 'transformer.resblocks.1.ln_2.weight', 'visual.transformer.resblocks.1.attn.in_proj_bias', 'transformer.resblocks.4.attn.out_proj.weight', 'visual.transformer.resblocks.11.mlp.c_fc.bias', 'transformer.resblocks.6.mlp.c_proj.weight', 'transformer.resblocks.5.mlp.c_fc.bias', 'transformer.resblocks.8.attn.out_proj.weight', 'transformer.resblocks.0.attn.in_proj_weight', 'transformer.resblocks.2.mlp.c_proj.bias', 'transformer.resblocks.2.ln_1.bias', 'visual.transformer.resblocks.3.mlp.c_proj.weight', 'transformer.resblocks.4.ln_1.bias', 'transformer.resblocks.10.mlp.c_proj.bias', 'visual.transformer.resblocks.5.attn.out_proj.bias', 'visual.transformer.resblocks.3.attn.in_proj_bias', 'transformer.resblocks.3.mlp.c_fc.bias', 'transformer.resblocks.10.ln_2.weight', 'visual.transformer.resblocks.3.attn.out_proj.bias', 'transformer.resblocks.0.attn.in_proj_bias', 'transformer.resblocks.1.attn.in_proj_bias', 'transformer.resblocks.0.mlp.c_proj.weight', 'visual.transformer.resblocks.10.attn.out_proj.weight', 'transformer.resblocks.4.mlp.c_fc.bias', 'transformer.resblocks.7.attn.out_proj.weight', 'positional_embedding', 'visual.transformer.resblocks.11.ln_2.weight', 'transformer.resblocks.11.mlp.c_fc.bias', 'transformer.resblocks.11.attn.out_proj.weight', 'visual.transformer.resblocks.9.mlp.c_proj.bias', 'visual.transformer.resblocks.0.attn.out_proj.weight', 'visual.transformer.resblocks.3.mlp.c_fc.bias', 'visual.transformer.resblocks.5.ln_2.bias', 'visual.transformer.resblocks.3.ln_1.bias', 'visual.transformer.resblocks.4.ln_1.bias', 'transformer.resblocks.0.mlp.c_proj.bias', 'visual.transformer.resblocks.10.ln_2.weight', 'transformer.resblocks.3.mlp.c_proj.bias', 'visual.conv1.weight', 'visual.transformer.resblocks.3.attn.out_proj.weight', 'transformer.resblocks.10.mlp.c_proj.weight'}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 13.850000000000001
+Top-5 accuracy: 49.74
+Zero shot result: top1: 13.850000000000001, top5: 49.74
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 13.850000000000001, 'top5': 49.74}}, 'epoch': 0}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 9.959999999999999
+Top-5 accuracy: 50.870000000000005
+Zero shot result: top1: 9.959999999999999, top5: 50.870000000000005
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 9.959999999999999, 'top5': 50.870000000000005}}, 'epoch': 5}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 10.32
+Top-5 accuracy: 49.980000000000004
+Zero shot result: top1: 10.32, top5: 49.980000000000004
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 10.32, 'top5': 49.980000000000004}}, 'epoch': 10}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 10.26
+Top-5 accuracy: 49.9
+Zero shot result: top1: 10.26, top5: 49.9
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 10.26, 'top5': 49.9}}, 'epoch': 15}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 10.0
+Top-5 accuracy: 49.61
+Zero shot result: top1: 10.0, top5: 49.61
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 10.0, 'top5': 49.61}}, 'epoch': 20}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 9.46
+Top-5 accuracy: 49.19
+Zero shot result: top1: 9.46, top5: 49.19
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 9.46, 'top5': 49.19}}, 'epoch': 25}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 9.719999999999999
+Top-5 accuracy: 49.730000000000004
+Zero shot result: top1: 9.719999999999999, top5: 49.730000000000004
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 9.719999999999999, 'top5': 49.730000000000004}}, 'epoch': 30}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 14.21
+Top-5 accuracy: 62.46000000000001
+Zero shot result: top1: 14.21, top5: 62.46000000000001
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 14.21, 'top5': 62.46000000000001}}, 'epoch': 35}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 15.959999999999999
+Top-5 accuracy: 65.29
+Zero shot result: top1: 15.959999999999999, top5: 65.29
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 15.959999999999999, 'top5': 65.29}}, 'epoch': 40}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 17.07
+Top-5 accuracy: 68.14
+Zero shot result: top1: 17.07, top5: 68.14
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 17.07, 'top5': 68.14}}, 'epoch': 45}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 20.65
+Top-5 accuracy: 73.87
+Zero shot result: top1: 20.65, top5: 73.87
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 20.65, 'top5': 73.87}}, 'epoch': 50}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 18.759999999999998
+Top-5 accuracy: 72.98
+Zero shot result: top1: 18.759999999999998, top5: 72.98
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 18.759999999999998, 'top5': 72.98}}, 'epoch': 55}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 19.71
+Top-5 accuracy: 74.83
+Zero shot result: top1: 19.71, top5: 74.83
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 19.71, 'top5': 74.83}}, 'epoch': 60}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 21.15
+Top-5 accuracy: 74.63
+Zero shot result: top1: 21.15, top5: 74.63
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 21.15, 'top5': 74.63}}, 'epoch': 65}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 21.18
+Top-5 accuracy: 74.82
+Zero shot result: top1: 21.18, top5: 74.82
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 21.18, 'top5': 74.82}}, 'epoch': 70}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 21.13
+Top-5 accuracy: 75.57000000000001
+Zero shot result: top1: 21.13, top5: 75.57000000000001
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 21.13, 'top5': 75.57000000000001}}, 'epoch': 75}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 19.17
+Top-5 accuracy: 73.15
+Zero shot result: top1: 19.17, top5: 73.15
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 19.17, 'top5': 73.15}}, 'epoch': 80}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 19.2
+Top-5 accuracy: 70.35
+Zero shot result: top1: 19.2, top5: 70.35
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 19.2, 'top5': 70.35}}, 'epoch': 85}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 19.68
+Top-5 accuracy: 69.69
+Zero shot result: top1: 19.68, top5: 69.69
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 19.68, 'top5': 69.69}}, 'epoch': 90}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 20.68
+Top-5 accuracy: 69.99
+Zero shot result: top1: 20.68, top5: 69.99
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 20.68, 'top5': 69.99}}, 'epoch': 95}
+Start test zero shot and linear probe on CIFAR10
+Files already downloaded and verified
+Files already downloaded and verified
+Start zero shot
+Top-1 accuracy: 20.61
+Top-5 accuracy: 70.07
+Zero shot result: top1: 20.61, top5: 70.07
+Start linear probe
+Linear probe is not supported on CIFAR10
+Linear probe result: {'accuary': -1, 'reason': 'CIFAR10 is too large'}
+{'CIFAR10': {'linear-probe': {'accuary': -1, 'reason': 'CIFAR10 is too large'}, 'zero-shot': {'top1': 20.61, 'top5': 70.07}}, 'epoch': 100}
