@@ -254,9 +254,9 @@ if __name__ == '__main__':
     # poisoning
     # parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     parser.add_argument('--clip_model', default='ViT-B/32', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
-    # aborded
+    # aborded 1
     parser.add_argument('--freeze_encoder', default='None', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
-    parser.add_argument('--from_scratch', action='store_true', help="train from scratch")
+    parser.add_argument('--from_scratch', action='store_true', help="train from scratch") 
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')

@@ -197,7 +197,7 @@ def generate_noise_from_pretrain(args):
         noises2 = torch.rand(dataset_len,3,224,224)
         # noises2 = torch.rand(dataset_len,3,288,288)
         noise_shape = (3,224,224)
-        # noise_shape = (16,3,288,288)
+        # noise_shape = (16,3,288,288) r
         
         for batch in tqdm(myDataloader):
             img, text, index = batch
