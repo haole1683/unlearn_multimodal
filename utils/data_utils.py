@@ -337,6 +337,32 @@ class jsonPoisonDataset(Dataset):
             return the_img, text
     def __len__(self):
         return len(self.json_data)
+    
+class csvDataset(Dataset):
+    def __init__(self, csv_path,images_path, image_key, caption_key, delimiter, processor=None, crop_size = 150):
+        import pandas as pd
+        import clip
+        df = pd.read_csv(csv_path, sep = delimiter)
+
+        self.root = os.path.dirname(images_path)
+        self.images = df[image_key].tolist()
+        self.captions_text = df[caption_key].tolist()
+        self.captions = clip.tokenize(df[caption_key].tolist(), truncate=True)
+        self.processor = processor
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        item = {}
+        item["image_path"] = self.images[idx]
+        image = Image.open(os.path.join(self.root, self.images[idx]))
+        item["caption"] = self.captions_text[idx]
+        item["input_ids"] = self.captions[idx]
+        # item["attention_mask"] = self.captions["attention_mask"][idx]
+        item["pixel_values"] = self.processor(image)
+        return item["pixel_values"], self.captions_text[idx], idx
+
 
 def load_json_data(dataset_name):
     import json

@@ -7,7 +7,7 @@ from utils.data_utils import load_class_dataset, To244TensorTrans
 from utils.noise_utils import gen_perturbation
 from utils.clip_util import prompt_templates
 from utils.noise_utils import save_noise, limit_noise
-from utils.data_utils import jsonDataset
+from utils.data_utils import jsonDataset, csvDataset
 from utils.os_utils import add_index_to_json_file, create_folder
 
 from torch.utils.data import Dataset, DataLoader
@@ -95,11 +95,11 @@ def generate_noise_from_pretrain(args):
     if clip_model == 'both':
         text_embedding_dim = 512
         # model, _ = clip.load("RN50", args.device, jit=False)   
-        model, _ = clip.load(clip_model, args.device, jit=False)
+        model, preprocess = clip.load(clip_model, args.device, jit=False)
         model = model.float()
         model = model.to(args.device)  
     else:
-        model, _ = clip.load(clip_model, args.device, jit=False)
+        model, preprocess = clip.load(clip_model, args.device, jit=False)
         model = model.float()
         model = model.to(args.device)  
     if clip_model == 'RN50':
@@ -204,9 +204,10 @@ def generate_noise_from_pretrain(args):
             text = tokenizer(text, truncate=True).to(args.device)
             text_embedding = model.encode_text(text)
             z_latent = z_latent_strategy.getZLatent(text.shape[0])
+            normization = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
             with torch.no_grad():
                 delta_im = gen_perturbation(generator, text_embedding, noise_shape,
-                                            z_latent,evaluate=True, args=args)
+                                            z_latent,evaluate=True, normalization=normization,args=args)
             index = index % dataset_len
             noises2[index] = delta_im.detach().cpu()
             
@@ -250,6 +251,62 @@ def generate_noise_from_pretrain(args):
     # For gen2
     if args.gen_which == 'gen2' or args.gen_which == 'all':
         gen2()
+
+    if args.dataset == 'Flickr-8K':
+        z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
+        flick_8k_train_csv_path = "/remote-home/songtianwei/research/unlearn_mm/Multimodal-Unlearnable-Examples/data/Flickr-8K/train.csv"
+        images_path = "/remote-home/songtianwei/research/unlearn_mm/Multimodal-Unlearnable-Examples/data/Flickr-8K/clip/Images/"
+        flick_8k_train_ds = csvDataset(flick_8k_train_csv_path, images_path, "image", "caption", ",", processor=preprocess)
+        myDataloader = DataLoader(flick_8k_train_ds, batch_size=16, shuffle=True,drop_last=True)
+        
+        dataset_len = len(flick_8k_train_ds)
+        the_noise = torch.rand(dataset_len,3,224,224)
+        noise_shape = (3,224,224)
+        
+        for batch in tqdm(myDataloader):
+            img, text, index = batch
+            text = tokenizer(text, truncate=True).to(args.device)
+            text_embedding = model.encode_text(text)
+            z_latent = z_latent_strategy.getZLatent(text.shape[0])
+            normization = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+            with torch.no_grad():
+                delta_im = gen_perturbation(generator, text_embedding, noise_shape,
+                                            z_latent,evaluate=True, normalization=normization,args=args)
+            index = index % dataset_len
+            the_noise[index] = delta_im.detach().cpu()
+            
+        noise_count = dataset_len
+        noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
+        tgt_save_path = os.path.join(args.output_dir, f"noise_gen2_{noise_shape_str}_flickr8K" + "_{clip_model}.pt")
+        torch.save(the_noise, tgt_save_path) 
+        
+    elif args.dataset == 'Flickr-30K':
+        z_latent_strategy = zLatentStrategy(update_freq=args.update_z_freq)
+        flick_30k_train_csv_path = "/remote-home/songtianwei/research/unlearn_mm/Multimodal-Unlearnable-Examples/data/Flickr30K/train.csv"
+        images_path = "/remote-home/songtianwei/research/unlearn_mm/Multimodal-Unlearnable-Examples/data/Flickr30K/clip/flickr30k_images/flickr30k_images/"
+        flick_30k_train_ds = csvDataset(flick_30k_train_csv_path, images_path, "image_name", "caption", ",", processor=preprocess)
+        myDataloader = DataLoader(flick_30k_train_ds, batch_size=64, shuffle=True,drop_last=True)
+        
+        dataset_len = len(flick_30k_train_ds)
+        the_noise = torch.rand(dataset_len,3,224,224)
+        noise_shape = (3,224,224)
+        
+        for batch in tqdm(myDataloader):
+            img, text, index = batch
+            text = tokenizer(text, truncate=True).to(args.device)
+            text_embedding = model.encode_text(text)
+            z_latent = z_latent_strategy.getZLatent(text.shape[0])
+            normization = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+            with torch.no_grad():
+                delta_im = gen_perturbation(generator, text_embedding, noise_shape,
+                                            z_latent,evaluate=True, normalization=normization,args=args)
+            index = index % dataset_len
+            the_noise[index] = delta_im.detach().cpu()
+            
+        noise_count = dataset_len
+        noise_shape_str = str(noise_count) + "-" + '-'.join([str(i) for i in noise_shape[1:]])
+        tgt_save_path = os.path.join(args.output_dir, f"noise_gen2_{noise_shape_str}_flickr8K" + f"_{clip_model}.pt")
+        torch.save(the_noise, tgt_save_path)    
 
 def main(args):
     generator_path = args.generator_path
@@ -311,15 +368,15 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()       
-    parser.add_argument('--device', default='cuda')
-    parser.add_argument('--generator_path', default= "./output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/checkpoint/generator_best_epoch-500_loss-0.058220808281365666.pth")
-    parser.add_argument('--output_dir', default="./output/unlearn_stage2_generate_noise_temp1/")
+    parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--generator_path', default= "/remote-home/songtianwei/research/unlearn_multimodal/output/unlearn_stage1_train_g_unlearn/gen-coco-ViT-B-32/checkpoint/generator_best_epoch-500_loss-0.058220808281365666.pth")
+    parser.add_argument('--output_dir', default="./outputCLIP/unlearn_stage2_generate_noise_temp1/")
     
     parser.add_argument('--clip_model', default='auto', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16', 'both', 'auto'])
-    parser.add_argument('--dataset', default='all', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10', 'cifar100'])
+    parser.add_argument('--dataset', default='Flickr-30K', choices=['all', 'cifar10', 'stl10', 'imagenet-cifar10', 'cifar100', 'Flickr-8K', 'Flickr-30K'])
     parser.add_argument('--tgt_class', default='all', choices=['all', 'cat', 'dog', 'bird', 'car', 'truck', 'plane', 'ship', 'horse', 'deer'])
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--gen_which', default='gen2', choices=['gen1', 'gen2', 'all'])
+    parser.add_argument('--gen_which', default='genForFlick', choices=['gen1', 'gen2', 'genForFlick', 'all'])
     # generate noise hyper parameter
     # Here, z freq means the frequency of updating z (generator latent input)
     # if 1 , then every batch update z_input

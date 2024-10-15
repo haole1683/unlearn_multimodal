@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evaluate=False,args=None):
+def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evaluate=False, multi_256=False,normalization = False, args=None):
     batch_size = text_embedding.shape[0]
     sec_emb = text_embedding
     if evaluate:
@@ -14,7 +14,7 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
         norm_type = args.norm_type
     
     if not hasattr(args, 'epsilon'):
-        epsilon = 16
+        epsilon = 8
     else:
         epsilon = args.epsilon
     
@@ -32,13 +32,20 @@ def gen_perturbation(generator ,text_embedding, noise_shape,z_latent=None, evalu
     else:
         output, _ = generator(z_latent, sec_emb)
         
-    limit_method = 'traditional'
+    limit_method = 'clamp'
     if limit_method == 'traditional':
-        noise = limit_noise(output, norm_type="linf", epsilon=128, device=device, noise_shape=noise_shape)
+        noise = limit_noise(output, norm_type="linf", epsilon=epsilon, device=device, noise_shape=noise_shape)
     elif limit_method == 'sunye':
-        noise = limit_noise_with_activation(output, epsilon=128, device=device, noise_shape=noise_shape)
-    else:
-        return output
+        noise = limit_noise_with_activation(output, epsilon=epsilon, device=device, noise_shape=noise_shape)
+    elif limit_method == 'clamp':
+        noise = F.interpolate(output, (noise_shape[-2], noise_shape[-1]))
+        noise = torch.clamp(noise, -epsilon / 255., epsilon / 255)
+    if normalization:
+        # print("noise2")
+        noise = normalization(noise)
+    if multi_256:
+        noise = noise * 256
+    # print("Shape" , noise.shape)
     return noise
 
 def save_noise(noise, path):

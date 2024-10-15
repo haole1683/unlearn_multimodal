@@ -249,9 +249,10 @@ if __name__ == '__main__':
     # training
     parser.add_argument('--batch_size', default=1024, type=int)
     parser.add_argument('--lr', default=5e-1, type=float)
-    parser.add_argument('--max_epoch', default=105, type=int)
+    parser.add_argument('--max_epoch', default=15, type=int)
 
     # poisoning
+    # parser.add_argument('--clip_model', default='ViT-B/16', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     parser.add_argument('--clip_model', default='ViT-B/32', help="image encoder type of clip", choices=['RN50', 'RN101', 'RN50x4', 'ViT-B/32', 'ViT-B/16'])
     # aborded
     parser.add_argument('--freeze_encoder', default='None', help="image or text or none", choices=['both','image','text','none']) # fi/ft = freeze image/text
@@ -259,9 +260,10 @@ if __name__ == '__main__':
     
     # config overload
     parser.add_argument('--overload_config', action='store_true')
-    parser.add_argument('--output_dir', default="./outputNew/unlearn_stage3_test_clip_finetune_adapter/")
+    parser.add_argument('--output_dir', default="./outputCLIP/unlearn_stage3_test_clip_finetune_adapter/")
     
     # noise
+    # parser.add_argument('--noise_path', default="./outputCLIP/unlearn_stage2_generate_noise_temp1/ViT-B-16/all/classWise/noise_gen2_46221-224-224_all_ViT-B-16.pt")
     parser.add_argument('--noise_path', default="./output/unlearn_stage2_generate_noise_temp1/ViT-B-32/all/classWise/noise_gen2_46221-224-224_all_ViT-B-32.pt")
     parser.add_argument('--test_train_type', default='finetune_clip')
     args = parser.parse_args()

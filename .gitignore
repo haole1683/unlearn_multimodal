@@ -11,3 +11,7 @@ tmp*
 *.log
 slurm*
 /outputNew/
+/useless_code/Spartan Server - Unimelb.txt
+/outputCLIP
+*.pt
+/unlearn_voice
